@@ -1,5 +1,5 @@
 from torch import nn
-from nets.graph_encoder import GraphAttentionEncoder
+from mapd.lib.transTSP.nets.graph_encoder import GraphAttentionEncoder
 
 
 class CriticNetwork(nn.Module):

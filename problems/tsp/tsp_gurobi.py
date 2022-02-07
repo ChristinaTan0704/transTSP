@@ -11,7 +11,7 @@
 
 import argparse
 import numpy as np
-from utils.data_utils import load_dataset, save_dataset
+from mapd.lib.transTSP.utils.data_utils import load_dataset, save_dataset
 from gurobipy import *
 
 

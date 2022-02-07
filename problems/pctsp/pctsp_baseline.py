@@ -1,8 +1,8 @@
 import argparse
 import os
 import numpy as np
-from utils import run_all_in_pool
-from utils.data_utils import check_extension, load_dataset, save_dataset
+from mapd.lib.transTSP.utils import run_all_in_pool
+from mapd.lib.transTSP.utils.data_utils import check_extension, load_dataset, save_dataset
 from subprocess import check_call, check_output
 import re
 import time

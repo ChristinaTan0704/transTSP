@@ -15,7 +15,7 @@ from tqdm import tqdm
 import os
 import matplotlib.pyplot as plt
 
-from utils import embed_seq, encode_seq, full_glimpse, pointer
+from mapd.lib.transTSP.utils import embed_seq, encode_seq, full_glimpse, pointer
 from data_generator import DataGenerator
 
 from datetime import timedelta

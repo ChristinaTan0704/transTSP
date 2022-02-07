@@ -4,10 +4,10 @@ import os
 import time
 from datetime import timedelta
 from scipy.spatial import distance_matrix
-from utils import run_all_in_pool
-from utils.data_utils import check_extension, load_dataset, save_dataset
+from mapd.lib.transTSP.utils import run_all_in_pool
+from mapd.lib.transTSP.utils.data_utils import check_extension, load_dataset, save_dataset
 from subprocess import check_call, check_output, CalledProcessError
-from problems.vrp.vrp_baseline import get_lkh_executable
+from mapd.lib.transTSP.problems.vrp.vrp_baseline import get_lkh_executable
 import torch
 from tqdm import tqdm
 import re
@@ -15,7 +15,7 @@ import re
 
 def solve_gurobi(directory, name, loc, disable_cache=False, timeout=None, gap=None):
     # Lazy import so we do not need to have gurobi installed to run this script
-    from problems.tsp.tsp_gurobi import solve_euclidian_tsp as solve_euclidian_tsp_gurobi
+    from mapd.lib.transTSP.problems.tsp.tsp_gurobi import solve_euclidian_tsp as solve_euclidian_tsp_gurobi
 
     try:
         problem_filename = os.path.join(directory, "{}.gurobi{}{}.pkl".format(
@@ -306,8 +306,8 @@ def nearest_neighbour(dataset, start='first'):
 def solve_all_nn(dataset_path, eval_batch_size=1024, no_cuda=False, dataset_n=None, progress_bar_mininterval=0.1):
     import torch
     from torch.utils.data import DataLoader
-    from problems import TSP
-    from utils import move_to
+    from mapd.lib.transTSP.problems import TSP
+    from mapd.lib.transTSP.utils import move_to
 
     dataloader = DataLoader(
         TSP.make_dataset(filename=dataset_path, num_samples=dataset_n if dataset_n is not None else 1000000),

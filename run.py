@@ -8,13 +8,13 @@ import torch
 import torch.optim as optim
 from tensorboard_logger import Logger as TbLogger
 
-from nets.critic_network import CriticNetwork
-from options import get_options
-from train import train_epoch, validate, get_inner_model
+from mapd.lib.transTSP.nets.critic_network import CriticNetwork
+from mapd.lib.transTSP.options import get_options
+from mapd.lib.transTSP.train import train_epoch, validate, get_inner_model
 from reinforce_baselines import NoBaseline, ExponentialBaseline, CriticBaseline, RolloutBaseline, WarmupBaseline
-from nets.attention_model import AttentionModel
-from nets.pointer_network import PointerNetwork, CriticNetworkLSTM
-from utils import torch_load_cpu, load_problem
+from mapd.lib.transTSP.nets.attention_model import AttentionModel
+from mapd.lib.transTSP.nets.pointer_network import PointerNetwork, CriticNetworkLSTM
+from mapd.lib.transTSP.utils import torch_load_cpu, load_problem
 
 
 def run(opts):

@@ -1,7 +1,7 @@
 import argparse
 import os
 import numpy as np
-from utils.data_utils import check_extension, save_dataset
+from mapd.lib.transTSP.utils.data_utils import check_extension, save_dataset
 
 
 def generate_tsp_data(dataset_size, tsp_size):

@@ -11,7 +11,7 @@ import torch.nn.functional as F
 
 
 def load_problem(name):
-    from problems import TSP, CVRP, SDVRP, OP, PCTSPDet, PCTSPStoch
+    from mapd.lib.transTSP.problems import TSP, CVRP, SDVRP, OP, PCTSPDet, PCTSPStoch
     problem = {
         'tsp': TSP,
         'cvrp': CVRP,
@@ -77,8 +77,8 @@ def load_args(filename):
 
 
 def load_model(path, epoch=None):
-    from nets.attention_model import AttentionModel
-    from nets.pointer_network import PointerNetwork
+    from mapd.lib.transTSP.nets.attention_model import AttentionModel
+    from mapd.lib.transTSP.nets.pointer_network import PointerNetwork
 
     if os.path.isfile(path):
         model_filename = path

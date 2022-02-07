@@ -7,9 +7,9 @@ import math
 from torch.utils.data import DataLoader
 from torch.nn import DataParallel
 
-from nets.attention_model import set_decode_type
-from utils.log_utils import log_values
-from utils import move_to
+from mapd.lib.transTSP.nets.attention_model import set_decode_type
+from mapd.lib.transTSP.utils.log_utils import log_values
+from mapd.lib.transTSP.utils import move_to
 
 
 def get_inner_model(model):

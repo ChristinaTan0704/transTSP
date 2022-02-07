@@ -1,13 +1,13 @@
 import argparse
 import os
 import numpy as np
-from utils import run_all_in_pool
-from utils.data_utils import check_extension, load_dataset, save_dataset
+from mapd.lib.transTSP.utils import run_all_in_pool
+from mapd.lib.transTSP.utils.data_utils import check_extension, load_dataset, save_dataset
 from subprocess import check_call, check_output
 import tempfile
 import time
 from datetime import timedelta
-from problems.op.opga.opevo import run_alg as run_opga_alg
+from mapd.lib.transTSP.problems.op.opga.opevo import run_alg as run_opga_alg
 from tqdm import tqdm
 import re
 
@@ -174,7 +174,7 @@ def solve_opga(directory, name, depot, loc, prize, max_length, disable_cache=Fal
 
 def solve_gurobi(directory, name, depot, loc, prize, max_length, disable_cache=False, timeout=None, gap=None):
     # Lazy import so we do not need to have gurobi installed to run this script
-    from problems.op.op_gurobi import solve_euclidian_op as solve_euclidian_op_gurobi
+    from mapd.lib.transTSP.problems.op.op_gurobi import solve_euclidian_op as solve_euclidian_op_gurobi
 
     try:
         problem_filename = os.path.join(directory, "{}.gurobi{}{}.pkl".format(
@@ -210,7 +210,7 @@ def solve_gurobi(directory, name, depot, loc, prize, max_length, disable_cache=F
 
 def solve_ortools(directory, name, depot, loc, prize, max_length, sec_local_search=0, disable_cache=False):
     # Lazy import so we do not require ortools by default
-    from problems.op.op_ortools import solve_op_ortools
+    from mapd.lib.transTSP.problems.op.op_ortools import solve_op_ortools
 
     try:
         problem_filename = os.path.join(directory, "{}.ortools{}.pkl".format(name, sec_local_search))
@@ -240,9 +240,9 @@ def run_all_tsiligirides(
         progress_bar_mininterval=0.1, seed=1234):
     import torch
     from torch.utils.data import DataLoader
-    from utils import move_to, sample_many
-    from problems.op.tsiligirides import op_tsiligirides
-    from problems.op.problem_op import OP
+    from mapd.lib.transTSP.utils import move_to, sample_many
+    from mapd.lib.transTSP.problems.op.tsiligirides import op_tsiligirides
+    from mapd.lib.transTSP.problems.op.problem_op import OP
     torch.manual_seed(seed)
 
     dataloader = DataLoader(
