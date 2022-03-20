@@ -41,8 +41,8 @@ class StateTSP(NamedTuple):
     @staticmethod
     def initialize(loc, visited_dtype=torch.uint8):
 
-        batch_size, n_loc, _ = loc.size()
-        prev_a = torch.zeros(batch_size, 1, dtype=torch.long, device=loc.device)
+        batch_size, n_loc, _ = loc.size() # n_loc = graph_size ; loc.size() = (batch_size, graph_size, coord_size )
+        prev_a = torch.zeros(batch_size, 1, dtype=torch.long, device=loc.device) # size = (batch_size, 1)
         return StateTSP(
             loc=loc,
             dist=(loc[:, :, None, :] - loc[:, None, :, :]).norm(p=2, dim=-1),

@@ -134,7 +134,6 @@ if __name__ == "__main__":
     for problem, distributions in problems.items():
         for distribution in distributions or [None]:
             for graph_size in opts.graph_sizes:
-
                 datadir = os.path.join(opts.data_dir, problem)
                 os.makedirs(datadir, exist_ok=True)
 
@@ -163,5 +162,4 @@ if __name__ == "__main__":
                     assert False, "Unknown problem: {}".format(problem)
 
                 print(dataset[0])
-
                 save_dataset(dataset, filename)

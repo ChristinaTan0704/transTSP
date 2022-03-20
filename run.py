@@ -13,6 +13,7 @@ from mapd.lib.transTSP.options import get_options
 from mapd.lib.transTSP.train import train_epoch, validate, get_inner_model
 from reinforce_baselines import NoBaseline, ExponentialBaseline, CriticBaseline, RolloutBaseline, WarmupBaseline
 from mapd.lib.transTSP.nets.attention_model import AttentionModel
+from mapd.model.heatmap_att import HeatmapAttentionModel
 from mapd.lib.transTSP.nets.pointer_network import PointerNetwork, CriticNetworkLSTM
 from mapd.lib.transTSP.utils import torch_load_cpu, load_problem
 
@@ -50,23 +51,44 @@ def run(opts):
         load_data = torch_load_cpu(load_path)
 
     # Initialize model
-    model_class = {
-        'attention': AttentionModel,
-        'pointer': PointerNetwork
-    }.get(opts.model, None)
+    if opts.embed == "heatmap":
+        model_class = {
+            'attention': HeatmapAttentionModel,
+            'pointer': PointerNetwork
+        }.get(opts.model, None)
+    else:
+        model_class = {
+            'attention': AttentionModel,
+            'pointer': PointerNetwork
+        }.get(opts.model, None)
     assert model_class is not None, "Unknown model: {}".format(model_class)
-    model = model_class(
-        opts.embedding_dim,
-        opts.hidden_dim,
-        problem,
-        n_encode_layers=opts.n_encode_layers,
-        mask_inner=True,
-        mask_logits=True,
-        normalization=opts.normalization,
-        tanh_clipping=opts.tanh_clipping,
-        checkpoint_encoder=opts.checkpoint_encoder,
-        shrink_size=opts.shrink_size
-    ).to(opts.device)
+    if opts.embed == "heatmap":
+            model = model_class(
+            opts.embedding_dim,
+            opts.hidden_dim,
+            problem,
+            n_encode_layers=opts.n_encode_layers,
+            mask_inner=True,
+            mask_logits=True,
+            normalization=opts.normalization,
+            tanh_clipping=opts.tanh_clipping,
+            checkpoint_encoder=opts.checkpoint_encoder,
+            shrink_size=opts.shrink_size,
+            grid_num=opts.grid_num
+        ).to(opts.device)
+    else:
+        model = model_class(
+            opts.embedding_dim,
+            opts.hidden_dim,
+            problem,
+            n_encode_layers=opts.n_encode_layers,
+            mask_inner=True,
+            mask_logits=True,
+            normalization=opts.normalization,
+            tanh_clipping=opts.tanh_clipping,
+            checkpoint_encoder=opts.checkpoint_encoder,
+            shrink_size=opts.shrink_size
+        ).to(opts.device)
 
     if opts.use_cuda and torch.cuda.device_count() > 1:
         model = torch.nn.DataParallel(model)
@@ -137,7 +159,7 @@ def run(opts):
 
     # Start the actual training loop
     val_dataset = problem.make_dataset(
-        size=opts.graph_size, num_samples=opts.val_size, filename=opts.val_dataset, distribution=opts.data_distribution)
+        size=opts.graph_size, num_samples=opts.val_size, filename=opts.val_dataset, distribution=opts.data_distribution, embed_type=opts.embed, grid_num=opts.grid_num)
 
     if opts.resume:
         epoch_resume = int(os.path.splitext(os.path.split(opts.resume)[-1])[0].split("-")[1])

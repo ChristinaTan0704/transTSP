@@ -7,7 +7,10 @@ import torch
 def get_options(args=None):
     parser = argparse.ArgumentParser(
         description="Attention based model for solving the Travelling Salesman Problem with Reinforcement Learning")
-
+    # Input type
+    parser.add_argument('--embed', default='', help="embed 'heatmap' or 2d coordinate")
+    parser.add_argument('--grid_num', type=int, default=20, help="how many grid per row/ col to create in the heatmap")
+    
     # Data
     parser.add_argument('--problem', default='tsp', help="The problem to solve, default 'tsp'")
     parser.add_argument('--graph_size', type=int, default=20, help="The size of the problem graph")

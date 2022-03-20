@@ -32,7 +32,7 @@ class AttentionModelFixed(NamedTuple):
         assert torch.is_tensor(key) or isinstance(key, slice)
         return AttentionModelFixed(
             node_embeddings=self.node_embeddings[key],
-            context_node_projected=self.context_node_projected[key],
+            context_node_projected=self.context_node_projected[key], # ! the average of all node's embeddings
             glimpse_key=self.glimpse_key[:, key],  # dim 0 are the heads
             glimpse_val=self.glimpse_val[:, key],  # dim 0 are the heads
             logit_key=self.logit_key[key]
@@ -86,19 +86,19 @@ class AttentionModel(nn.Module):
                 node_dim = 3  # x, y, demand / prize
 
             # Special embedding projection for depot node
-            self.init_embed_depot = nn.Linear(2, embedding_dim)
+            self.init_embed_depot = nn.Linear(2, embedding_dim) 
             
             if self.is_vrp and self.allow_partial:  # Need to include the demand if split delivery allowed
                 self.project_node_step = nn.Linear(1, 3 * embedding_dim, bias=False)
         else:  # TSP
             assert problem.NAME == "tsp", "Unsupported problem: {}".format(problem.NAME)
             step_context_dim = 2 * embedding_dim  # Embedding of first and last node
-            node_dim = 2  # x, y
+            node_dim = 2  # x, y 
             
             # Learned input symbols for first action
             self.W_placeholder = nn.Parameter(torch.Tensor(2 * embedding_dim))
             self.W_placeholder.data.uniform_(-1, 1)  # Placeholder should be in range of activations
-
+        # 2 * 128
         self.init_embed = nn.Linear(node_dim, embedding_dim)
 
         self.embedder = GraphAttentionEncoder(
@@ -107,7 +107,6 @@ class AttentionModel(nn.Module):
             n_layers=self.n_encode_layers,
             normalization=normalization
         )
-
         # For each node we compute (glimpse key, glimpse value, logit key) so 3 * embedding_dim
         self.project_node_embeddings = nn.Linear(embedding_dim, 3 * embedding_dim, bias=False)
         self.project_fixed_context = nn.Linear(embedding_dim, embedding_dim, bias=False)
@@ -128,13 +127,13 @@ class AttentionModel(nn.Module):
         using DataParallel as the results may be of different lengths on different GPUs
         :return:
         """
-
         if self.checkpoint_encoder and self.training:  # Only checkpoint if we need gradients
             embeddings, _ = checkpoint(self.embedder, self._init_embed(input))
         else:
             embeddings, _ = self.embedder(self._init_embed(input))
-
-        _log_p, pi = self._inner(input, embeddings)
+        # _log_p : the probability; _log_p.size = (batch_size, graph_size, graph_size); the probabilty to be selected at each round (round: 0 ~ graph_size)
+        # pi.size = (batch_size, graph_size); stores the TSP solution for all samples in a batch
+        _log_p, pi = self._inner(input, embeddings) 
 
         cost, mask = self.problem.get_costs(input, pi)
         # Log likelyhood is calculated within the model since returning it per action does not work well with
@@ -199,7 +198,7 @@ class AttentionModel(nn.Module):
         return log_p.sum(1)
 
     def _init_embed(self, input):
-
+        
         if self.is_vrp or self.is_orienteering or self.is_pctsp:
             if self.is_vrp:
                 features = ('demand', )
@@ -222,20 +221,23 @@ class AttentionModel(nn.Module):
         return self.init_embed(input)
 
     def _inner(self, input, embeddings):
-
+        """
+        calculate the node selected probability and selected sequences based on embeddings
+        """
         outputs = []
         sequences = []
-
-        state = self.problem.make_state(input)
+        # ! state --- a class that helps to computer the cost sth
+        state = self.problem.make_state(input) # init a state
 
         # Compute keys, values for the glimpse and keys for the logits once as they can be reused in every step
-        fixed = self._precompute(embeddings)
+        # ! fixed --- an AttentionModelFixed object that stores the K Q W extracted from the last layer's output embeddings
+        fixed = self._precompute(embeddings) 
 
         batch_size = state.ids.size(0)
 
         # Perform decoding steps
         i = 0
-        while not (self.shrink_size is None and state.all_finished()):
+        while not (self.shrink_size is None and state.all_finished()): # TODO check if state.all_finished() == True --> does this means when we run for graph_size time it will turn True?
 
             if self.shrink_size is not None:
                 unfinished = torch.nonzero(state.get_finished() == 0)
@@ -248,7 +250,7 @@ class AttentionModel(nn.Module):
                     # Filter states
                     state = state[unfinished]
                     fixed = fixed[unfinished]
-
+            import pdb; pdb.set_trace()
             log_p, mask = self._get_log_p(fixed, state)
 
             # Select the indices of the next nodes in the sequences, result (batch_size) long
@@ -310,23 +312,28 @@ class AttentionModel(nn.Module):
             assert False, "Unknown decode type"
         return selected
 
-    def _precompute(self, embeddings, num_steps=1):
-
+    def _precompute(self, embeddings, num_steps=1): # embeddings.size = [batch_size, graph_size, embed_dim]
+        
         # The fixed context projection of the graph embedding is calculated only once for efficiency
-        graph_embed = embeddings.mean(1)
+        graph_embed = embeddings.mean(1) # graph_embed.size = [batch_size, embed_dim] 
         # fixed context = (batch_size, 1, embed_dim) to make broadcastable with parallel timesteps
-        fixed_context = self.project_fixed_context(graph_embed)[:, None, :]
+        fixed_context = self.project_fixed_context(graph_embed)[:, None, :] # ! fixed_context.size = [batch_size, 1, embed_dim]
 
         # The projection of the node embeddings for the attention is calculated once up front
+        # ! self.project_node_embeddings = nn.Linear(embedding_dim, 3 * embedding_dim, bias=False)
+        # ! glimpse_key_fixed.shape = [batch_size, 1, graph_size, embed_dim], for each node we still have 128*1 embeddings
+        # ! extract K Q W from embeddings absed on linear transformation
         glimpse_key_fixed, glimpse_val_fixed, logit_key_fixed = \
             self.project_node_embeddings(embeddings[:, None, :, :]).chunk(3, dim=-1)
 
         # No need to rearrange key for logit as there is a single head
+        # ! fixed_attention_node_data is to reshape the K Q W (n_heads, batch_size, num_steps, graph_size, head_dim)
         fixed_attention_node_data = (
             self._make_heads(glimpse_key_fixed, num_steps),
             self._make_heads(glimpse_val_fixed, num_steps),
             logit_key_fixed.contiguous()
         )
+        # ! use AttentionModelFixed to pack fixed_attention_node_data into an object
         return AttentionModelFixed(embeddings, fixed_context, *fixed_attention_node_data)
 
     def _get_log_p_topk(self, fixed, state, k=None, normalize=True):
@@ -344,7 +351,7 @@ class AttentionModel(nn.Module):
 
     def _get_log_p(self, fixed, state, normalize=True):
 
-        # Compute query = context node embedding
+        # Compute query = context node embedding; # ! query.size = [batch_size, 1, embed_dim]
         query = fixed.context_node_projected + \
                 self.project_step_context(self._get_parallel_step_context(fixed.node_embeddings, state))
 
@@ -354,7 +361,7 @@ class AttentionModel(nn.Module):
         # Compute the mask
         mask = state.get_mask()
 
-        # Compute logits (unnormalized log_p)
+        # Compute logits (unnormalized log_p) # ! log_p.shape = [batch_size, 1, graph_size]; glimpse.size = [batch_size, 1, embed_dim]
         log_p, glimpse = self._one_to_many_logits(query, glimpse_K, glimpse_V, logit_K, mask)
 
         if normalize:

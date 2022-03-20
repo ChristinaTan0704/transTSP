@@ -52,37 +52,37 @@ class MultiHeadAttention(nn.Module):
             stdv = 1. / math.sqrt(param.size(-1))
             param.data.uniform_(-stdv, stdv)
 
-    def forward(self, q, h=None, mask=None):
+    def forward(self, queries, data=None, mask=None):
         """
 
-        :param q: queries (batch_size, n_query, input_dim)
-        :param h: data (batch_size, graph_size, input_dim)
+        :param queries: queries (batch_size, n_query, input_dim)
+        :param data: data (batch_size, graph_size, input_dim)
         :param mask: mask (batch_size, n_query, graph_size) or viewable as that (i.e. can be 2 dim if n_query == 1)
         Mask should contain 1 if attention is not possible (i.e. mask is negative adjacency)
         :return:
         """
-        if h is None:
-            h = q  # compute self-attention
 
-        # h should be (batch_size, graph_size, input_dim)
-        batch_size, graph_size, input_dim = h.size()
-        n_query = q.size(1)
-        assert q.size(0) == batch_size
-        assert q.size(2) == input_dim
+        if data is None:
+            data = queries  # compute self-attention
+
+        # data should be (batch_size, graph_size, input_dim)
+        batch_size, graph_size, input_dim = data.size()
+        n_query = queries.size(1)
+        assert queries.size(0) == batch_size
+        assert queries.size(2) == input_dim
         assert input_dim == self.input_dim, "Wrong embedding dimension of input"
-
-        hflat = h.contiguous().view(-1, input_dim)
-        qflat = q.contiguous().view(-1, input_dim)
+        queries_flat = data.contiguous().view(-1, input_dim)
+        data_flat = queries.contiguous().view(-1, input_dim)
 
         # last dimension can be different for keys and values
         shp = (self.n_heads, batch_size, graph_size, -1)
         shp_q = (self.n_heads, batch_size, n_query, -1)
 
         # Calculate queries, (n_heads, n_query, graph_size, key/val_size)
-        Q = torch.matmul(qflat, self.W_query).view(shp_q)
+        Q = torch.matmul(data_flat, self.W_query).view(shp_q)
         # Calculate keys and values (n_heads, batch_size, graph_size, key/val_size)
-        K = torch.matmul(hflat, self.W_key).view(shp)
-        V = torch.matmul(hflat, self.W_val).view(shp)
+        K = torch.matmul(queries_flat, self.W_key).view(shp)
+        V = torch.matmul(queries_flat, self.W_val).view(shp)
 
         # Calculate compatibility (n_heads, batch_size, n_query, graph_size)
         compatibility = self.norm_factor * torch.matmul(Q, K.transpose(2, 3))
@@ -141,7 +141,6 @@ class Normalization(nn.Module):
             param.data.uniform_(-stdv, stdv)
 
     def forward(self, input):
-
         if isinstance(self.normalizer, nn.BatchNorm1d):
             return self.normalizer(input.view(-1, input.size(-1))).view(*input.size())
         elif isinstance(self.normalizer, nn.InstanceNorm1d):
@@ -164,7 +163,7 @@ class MultiHeadAttentionLayer(nn.Sequential):
             SkipConnection(
                 MultiHeadAttention(
                     n_heads,
-                    input_dim=embed_dim,
+                    input_dim=embed_dim, 
                     embed_dim=embed_dim
                 )
             ),
@@ -192,10 +191,10 @@ class GraphAttentionEncoder(nn.Module):
     ):
         super(GraphAttentionEncoder, self).__init__()
 
-        # To map input to embedding space
+        # To map input to embedding space 
         self.init_embed = nn.Linear(node_dim, embed_dim) if node_dim is not None else None
 
-        self.layers = nn.Sequential(*(
+        self.layers = nn.Sequential(*( 
             MultiHeadAttentionLayer(n_heads, embed_dim, feed_forward_hidden, normalization)
             for _ in range(n_layers)
         ))
@@ -203,13 +202,12 @@ class GraphAttentionEncoder(nn.Module):
     def forward(self, x, mask=None):
 
         assert mask is None, "TODO mask not yet supported!"
-
         # Batch multiply to get initial embeddings of nodes
-        h = self.init_embed(x.view(-1, x.size(-1))).view(*x.size()[:2], -1) if self.init_embed is not None else x
+        data = self.init_embed(x.view(-1, x.size(-1))).view(*x.size()[:2], -1) if self.init_embed is not None else x
 
-        h = self.layers(h)
+        data = self.layers(data)
 
         return (
-            h,  # (batch_size, graph_size, embed_dim)
-            h.mean(dim=1),  # average to get embedding of graph, (batch_size, embed_dim)
+            data,  # (batch_size, graph_size, embed_dim)
+            data.mean(dim=1),  # average to get embedding of graph, (batch_size, embed_dim)
         )

@@ -4,7 +4,7 @@ import os
 import pickle
 from mapd.lib.transTSP.problems.tsp.state_tsp import StateTSP
 from mapd.lib.transTSP.utils.beam_search import beam_search
-
+from mapd.utils import coord_to_heatmap
 
 class TSP(object):
 
@@ -54,7 +54,7 @@ class TSP(object):
 
 class TSPDataset(Dataset):
     
-    def __init__(self, filename=None, size=50, num_samples=1000000, offset=0, distribution=None):
+    def __init__(self, filename=None, size=50, num_samples=1000000, offset=0, distribution=None, embed_type="coord", grid_num=20):
         super(TSPDataset, self).__init__()
 
         self.data_set = []
@@ -67,11 +67,15 @@ class TSPDataset(Dataset):
         else:
             # Sample points randomly in [0, 1] square
             self.data = [torch.FloatTensor(size, 2).uniform_(0, 1) for i in range(num_samples)]
-
+        if embed_type == "heatmap":
+            self.data = torch.FloatTensor(coord_to_heatmap(self.data, grid_num))
         self.size = len(self.data)
+    
 
     def __len__(self):
         return self.size
 
     def __getitem__(self, idx):
         return self.data[idx]
+
+
