@@ -3,6 +3,7 @@ import torch.nn.functional as F
 from torch.utils.data import Dataset
 from scipy.stats import ttest_rel
 import copy
+import math
 from mapd.lib.transTSP.train import rollout, get_inner_model
 
 class Baseline(object):
@@ -168,6 +169,7 @@ class RolloutBaseline(Baseline):
         else:
             self.dataset = dataset
         print("Evaluating baseline model on evaluation dataset")
+
         self.bl_vals = rollout(self.model, self.dataset, self.opts).cpu().numpy()
         self.mean = self.bl_vals.mean()
         self.epoch = epoch
@@ -195,10 +197,10 @@ class RolloutBaseline(Baseline):
         :param model: The model to challenge the baseline by
         :param epoch: The current epoch
         """
-        print("Evaluating candidate model on evaluation dataset")
+        print("Evaluating candidate model on evaluation dataset") # ! len(candidate_vals) = self.opts.val_size
         candidate_vals = rollout(model, self.dataset, self.opts).cpu().numpy()
 
-        candidate_mean = candidate_vals.mean()
+        candidate_mean = candidate_vals.mean() 
 
         print("Epoch {} candidate mean {}, baseline epoch {} mean {}, difference {}".format(
             epoch, candidate_mean, self.epoch, self.mean, candidate_mean - self.mean))
@@ -207,9 +209,9 @@ class RolloutBaseline(Baseline):
             t, p = ttest_rel(candidate_vals, self.bl_vals)
 
             p_val = p / 2  # one-sided
-            assert t < 0, "T-statistic should be negative"
+            assert (t < 0 or math.isnan(t)), "T-statistic should be negative"
             print("p-value: {}".format(p_val))
-            if p_val < self.opts.bl_alpha:
+            if p_val < self.opts.bl_alpha or math.isnan(p):
                 print('Update baseline')
                 self._update_model(model, epoch)
 

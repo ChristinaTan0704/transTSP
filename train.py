@@ -37,11 +37,26 @@ def rollout(model, dataset, opts):
             cost, _ = model(move_to(bat, opts.device))
         return cost.data.cpu()
 
-    return torch.cat([
-        eval_model_bat(bat)
-        for bat
-        in tqdm(DataLoader(dataset, batch_size=opts.eval_batch_size), disable=opts.no_progress_bar)
-    ], 0)
+    def eval_model_bat_heatmap(bat):
+        with torch.no_grad():
+            coord, heatmap = bat
+            coord = move_to(coord, opts.device)
+            heatmap = move_to(heatmap, opts.device)
+            cost, _ = model([coord, heatmap])
+        return cost.data.cpu()
+
+    if opts.embed == "heatmap":
+        return torch.cat([
+            eval_model_bat_heatmap(bat)
+            for bat
+            in tqdm(DataLoader(dataset, batch_size=opts.eval_batch_size), disable=opts.no_progress_bar)
+        ], 0)
+    else:
+        return torch.cat([
+            eval_model_bat(bat)
+            for bat
+            in tqdm(DataLoader(dataset, batch_size=opts.eval_batch_size), disable=opts.no_progress_bar)
+        ], 0)
 
 
 def clip_grad_norms(param_groups, max_norm=math.inf):
@@ -80,8 +95,9 @@ def train_epoch(model, optimizer, baseline, lr_scheduler, epoch, val_dataset, pr
     # Put model in train mode!
     model.train()
     set_decode_type(model, "sampling")
-
+    
     for batch_id, batch in enumerate(tqdm(training_dataloader, disable=opts.no_progress_bar)):
+        
         train_batch(
             model,
             optimizer,
@@ -135,13 +151,18 @@ def train_batch(
         opts
 ):
     x, bl_val = baseline.unwrap_batch(batch)
-    x = move_to(x, opts.device)
+
+    x[0] = move_to(x[0], opts.device)
+    x[1] = move_to(x[1], opts.device)
     bl_val = move_to(bl_val, opts.device) if bl_val is not None else None
 
-    # Evaluate model, get costs and log probabilities
-    cost, log_likelihood = model(x)
+    # Evaluate model, get costs and log probabilities # ! log_likelihood/ cost --> size [batch_size]
+    cost, log_likelihood = model(x) # ! log_likelihood.requires_grad = True; cost.requires_grad = False
+    
+    # Evaluate baseline, get baseline loss if any (only for critic) 
+    # ! TSP default basedline --- rollout 
+    # ! initialize : bl_val = cost.mean()
 
-    # Evaluate baseline, get baseline loss if any (only for critic)
     bl_val, bl_loss = baseline.eval(x, cost) if bl_val is None else (bl_val, 0)
 
     # Calculate loss

@@ -127,7 +127,7 @@ def run(opts):
     else:
         assert opts.baseline is None, "Unknown baseline: {}".format(opts.baseline)
         baseline = NoBaseline()
-
+    # ! rollout --> deterministic greedy rollout of the policy defined by the best model so far
     if opts.bl_warmup_epochs > 0:
         baseline = WarmupBaseline(baseline, opts.bl_warmup_epochs, warmup_exp_beta=opts.exp_beta)
 

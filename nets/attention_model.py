@@ -131,17 +131,18 @@ class AttentionModel(nn.Module):
             embeddings, _ = checkpoint(self.embedder, self._init_embed(input))
         else:
             embeddings, _ = self.embedder(self._init_embed(input))
-        # _log_p : the probability; _log_p.size = (batch_size, graph_size, graph_size); the probabilty to be selected at each round (round: 0 ~ graph_size)
-        # pi.size = (batch_size, graph_size); stores the TSP solution for all samples in a batch
+        # ! _log_p : the probability; _log_p.size = (batch_size, graph_size, graph_size); the probabilty to be selected at each round (round: 0 ~ graph_size)
+        # ! pi.size = (batch_size, graph_size); stores the TSP solution for all samples in a batch
         _log_p, pi = self._inner(input, embeddings) 
-
-        cost, mask = self.problem.get_costs(input, pi)
+        
+        cost, mask = self.problem.get_costs(input, pi) # ! cost is the L2 distance for the current output path; mask is None for TSP
         # Log likelyhood is calculated within the model since returning it per action does not work well with
         # DataParallel since sequences can be of different lengths
+
         ll = self._calc_log_likelihood(_log_p, pi, mask)
         if return_pi:
             return cost, ll, pi
-
+        
         return cost, ll
 
     def beam_search(self, *args, **kwargs):
@@ -183,9 +184,9 @@ class AttentionModel(nn.Module):
 
         return flat_parent[feas_ind], flat_action[feas_ind], flat_score[feas_ind]
 
-    def _calc_log_likelihood(self, _log_p, a, mask):
+    def _calc_log_likelihood(self, _log_p, a, mask): # ! a : the output route
 
-        # Get log_p corresponding to selected actions
+        # Get log_p corresponding to selected actions # ! log_p.shape = [batch_size, graph_size]
         log_p = _log_p.gather(2, a.unsqueeze(-1)).squeeze(-1)
 
         # Optional: mask out actions irrelevant to objective so they do not get reinforced
@@ -195,7 +196,7 @@ class AttentionModel(nn.Module):
         assert (log_p > -1000).data.all(), "Logprobs should not be -inf, check sampling procedure!"
 
         # Calculate log_likelihood
-        return log_p.sum(1)
+        return log_p.sum(1) 
 
     def _init_embed(self, input):
         
@@ -250,13 +251,12 @@ class AttentionModel(nn.Module):
                     # Filter states
                     state = state[unfinished]
                     fixed = fixed[unfinished]
-            import pdb; pdb.set_trace()
-            log_p, mask = self._get_log_p(fixed, state)
+            log_p, mask = self._get_log_p(fixed, state) # ! log_p.shape = [batch_size, 1, graph_size]
 
             # Select the indices of the next nodes in the sequences, result (batch_size) long
             selected = self._select_node(log_p.exp()[:, 0, :], mask[:, 0, :])  # Squeeze out steps dimension
 
-            state = state.update(selected)
+            state = state.update(selected) # ! Update the state; (prev_a etc)
 
             # Now make log_p, selected desired output size by 'unshrinking'
             if self.shrink_size is not None and state.ids.size(0) < batch_size:
@@ -294,13 +294,13 @@ class AttentionModel(nn.Module):
 
         assert (probs == probs).all(), "Probs should not contain any nans"
 
-        if self.decode_type == "greedy":
+        if self.decode_type == "greedy": # ! default selection method
             _, selected = probs.max(1)
             assert not mask.gather(1, selected.unsqueeze(
                 -1)).data.any(), "Decode greedy: infeasible action has maximum probability"
 
-        elif self.decode_type == "sampling":
-            selected = probs.multinomial(1).squeeze(1)
+        elif self.decode_type == "sampling": # ! torch.multinomial Returns a tensor where each row contains num_samples indices sampled from the multinomial probability distribution located in the corresponding row of tensor input
+            selected = probs.multinomial(1).squeeze(1) 
 
             # Check if sampling went OK, can go wrong due to bug on GPU
             # See https://discuss.pytorch.org/t/bad-behavior-of-multinomial-function/10232

@@ -11,13 +11,12 @@ class TSP(object):
     NAME = 'tsp'
 
     @staticmethod
-    def get_costs(dataset, pi):
+    def get_costs(dataset, pi): # TODO change the way to calculate cost here 
         # Check that tours are valid, i.e. contain 0 to n -1
         assert (
             torch.arange(pi.size(1), out=pi.data.new()).view(1, -1).expand_as(pi) ==
             pi.data.sort(1)[0]
         ).all(), "Invalid tour"
-
         # Gather dataset in order of tour
         d = dataset.gather(1, pi.unsqueeze(-1).expand_as(dataset))
 
@@ -56,8 +55,9 @@ class TSPDataset(Dataset):
     
     def __init__(self, filename=None, size=50, num_samples=1000000, offset=0, distribution=None, embed_type="coord", grid_num=20):
         super(TSPDataset, self).__init__()
-
+        
         self.data_set = []
+        self.embed_type = embed_type
         if filename is not None:
             assert os.path.splitext(filename)[1] == '.pkl'
 
@@ -68,7 +68,8 @@ class TSPDataset(Dataset):
             # Sample points randomly in [0, 1] square
             self.data = [torch.FloatTensor(size, 2).uniform_(0, 1) for i in range(num_samples)]
         if embed_type == "heatmap":
-            self.data = torch.FloatTensor(coord_to_heatmap(self.data, grid_num))
+            self.heatmap = torch.FloatTensor(coord_to_heatmap(self.data, grid_num))
+
         self.size = len(self.data)
     
 
@@ -76,6 +77,9 @@ class TSPDataset(Dataset):
         return self.size
 
     def __getitem__(self, idx):
-        return self.data[idx]
+        if self.embed_type == "heatmap":
+            return self.data[idx], self.heatmap[idx]
+        else:
+            return self.data[idx]
 
 
