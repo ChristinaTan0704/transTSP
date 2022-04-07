@@ -58,6 +58,7 @@ class TSPDataset(Dataset):
         
         self.data_set = []
         self.embed_type = embed_type
+
         if filename is not None:
             assert os.path.splitext(filename)[1] == '.pkl'
 
@@ -70,8 +71,13 @@ class TSPDataset(Dataset):
         if embed_type == "heatmap":
             self.heatmap = torch.FloatTensor(coord_to_heatmap(self.data, grid_num))
 
+        if len(self.data) <= 100:
+            # Try to get more sample 
+            self.data = [self.data[0] for i in range(1024)]
+            if embed_type == "heatmap":
+                self.heatmap = [self.heatmap[0] for i in range(1024)]
         self.size = len(self.data)
-    
+
 
     def __len__(self):
         return self.size

@@ -75,7 +75,7 @@ class StateSDVRP(NamedTuple):
 
         # Not selected_demand is demand of first node (by clamp) so incorrect for nodes that visit depot!
         selected_demand = self.demands_with_depot.gather(-1, prev_a[:, :, None])[:, :, 0]
-        delivered_demand = torch.min(selected_demand, self.VEHICLE_CAPACITY - self.used_capacity)
+        delivered_demand = torch.min(selected_demand, self.VEHICLE_CAPACITY - self.used_capacity) # ! the demand we are going to deliver is the max of remaining demand 
 
         # Increase capacity if depot is not visited, otherwise set to 0
         #used_capacity = torch.where(selected == 0, 0, self.used_capacity + delivered_demand)

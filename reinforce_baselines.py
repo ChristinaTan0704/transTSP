@@ -34,7 +34,6 @@ class WarmupBaseline(Baseline):
 
     def __init__(self, baseline, n_epochs=1, warmup_exp_beta=0.8, ):
         super(Baseline, self).__init__()
-
         self.baseline = baseline
         assert n_epochs > 0, "n_epochs to warmup must be positive"
         self.warmup_baseline = ExponentialBaseline(warmup_exp_beta)
@@ -52,7 +51,7 @@ class WarmupBaseline(Baseline):
         return self.warmup_baseline.unwrap_batch(batch)
 
     def eval(self, x, c):
-
+        
         if self.alpha == 1:
             return self.baseline.eval(x, c)
         if self.alpha == 0:
@@ -64,10 +63,12 @@ class WarmupBaseline(Baseline):
 
     def epoch_callback(self, model, epoch):
         # Need to call epoch callback of inner model (also after first epoch if we have not used it)
-        self.baseline.epoch_callback(model, epoch)
+        candidate_mean = self.baseline.epoch_callback(model, epoch)
         self.alpha = (epoch + 1) / float(self.n_epochs)
         if epoch < self.n_epochs:
             print("Set warmup alpha = {}".format(self.alpha))
+        return candidate_mean
+        
 
     def state_dict(self):
         # Checkpointing within warmup stage makes no sense, only save inner baseline
@@ -93,7 +94,7 @@ class ExponentialBaseline(Baseline):
         self.v = None
 
     def eval(self, x, c):
-
+        
         if self.v is None:
             v = c.mean()
         else:
@@ -119,6 +120,7 @@ class CriticBaseline(Baseline):
         self.critic = critic
 
     def eval(self, x, c):
+        
         v = self.critic(x)
         # Detach v since actor should not backprop through baseline, only for loss
         return v.detach(), F.mse_loss(v, c.detach())
@@ -154,7 +156,7 @@ class RolloutBaseline(Baseline):
     def _update_model(self, model, epoch, dataset=None):
         self.model = copy.deepcopy(model)
         # Always generate baseline dataset when updating model to prevent overfitting to the baseline dataset
-
+        
         if dataset is not None:
             if len(dataset) != self.opts.val_size:
                 print("Warning: not using saved baseline dataset since val_size does not match")
@@ -165,7 +167,7 @@ class RolloutBaseline(Baseline):
 
         if dataset is None:
             self.dataset = self.problem.make_dataset(
-                size=self.opts.graph_size, num_samples=self.opts.val_size, distribution=self.opts.data_distribution, embed_type=self.opts.embed, grid_num=self.opts.grid_num)
+                size=self.opts.graph_size, num_samples=self.opts.val_size, filename=self.opts.train_dataset, distribution=self.opts.data_distribution, embed_type=self.opts.embed, grid_num=self.opts.grid_num)
         else:
             self.dataset = dataset
         print("Evaluating baseline model on evaluation dataset")
@@ -184,6 +186,7 @@ class RolloutBaseline(Baseline):
         return batch['data'], batch['baseline'].view(-1)  # Flatten result to undo wrapping as 2D
 
     def eval(self, x, c):
+        
         # Use volatile mode for efficient inference (single batch so we do not use rollout function)
         with torch.no_grad():
             v, _ = self.model(x)
@@ -199,11 +202,12 @@ class RolloutBaseline(Baseline):
         """
         print("Evaluating candidate model on evaluation dataset") # ! len(candidate_vals) = self.opts.val_size
         candidate_vals = rollout(model, self.dataset, self.opts).cpu().numpy()
-
+        
         candidate_mean = candidate_vals.mean() 
 
         print("Epoch {} candidate mean {}, baseline epoch {} mean {}, difference {}".format(
             epoch, candidate_mean, self.epoch, self.mean, candidate_mean - self.mean))
+
         if candidate_mean - self.mean < 0:
             # Calc p value
             t, p = ttest_rel(candidate_vals, self.bl_vals)
@@ -214,7 +218,8 @@ class RolloutBaseline(Baseline):
             if p_val < self.opts.bl_alpha or math.isnan(p):
                 print('Update baseline')
                 self._update_model(model, epoch)
-
+                return candidate_mean
+        
     def state_dict(self):
         return {
             'model': self.model,

@@ -98,6 +98,7 @@ def run(opts):
     model_.load_state_dict({**model_.state_dict(), **load_data.get('model', {})})
 
     # Initialize baseline
+
     if opts.baseline == 'exponential':
         baseline = ExponentialBaseline(opts.exp_beta)
     elif opts.baseline == 'critic' or opts.baseline == 'critic_lstm':

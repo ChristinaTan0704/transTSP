@@ -86,7 +86,7 @@ class AttentionModel(nn.Module):
                 node_dim = 3  # x, y, demand / prize
 
             # Special embedding projection for depot node
-            self.init_embed_depot = nn.Linear(2, embedding_dim) 
+            self.init_embed_depot = nn.Linear(2, embedding_dim) # ! self.init_embed_depot linear projection for the depot node
             
             if self.is_vrp and self.allow_partial:  # Need to include the demand if split delivery allowed
                 self.project_node_step = nn.Linear(1, 3 * embedding_dim, bias=False)
@@ -98,7 +98,7 @@ class AttentionModel(nn.Module):
             # Learned input symbols for first action
             self.W_placeholder = nn.Parameter(torch.Tensor(2 * embedding_dim))
             self.W_placeholder.data.uniform_(-1, 1)  # Placeholder should be in range of activations
-        # 2 * 128
+        # ! node_dim is 2 for TSP 2 * 128; node_dim is 3 for CVRP
         self.init_embed = nn.Linear(node_dim, embedding_dim)
 
         self.embedder = GraphAttentionEncoder(
@@ -110,7 +110,7 @@ class AttentionModel(nn.Module):
         # For each node we compute (glimpse key, glimpse value, logit key) so 3 * embedding_dim
         self.project_node_embeddings = nn.Linear(embedding_dim, 3 * embedding_dim, bias=False)
         self.project_fixed_context = nn.Linear(embedding_dim, embedding_dim, bias=False)
-        self.project_step_context = nn.Linear(step_context_dim, embedding_dim, bias=False)
+        self.project_step_context = nn.Linear(step_context_dim, embedding_dim, bias=False) # ! step_context_dim = 2 * embedding_dim  # Embedding of first and last node
         assert embedding_dim % n_heads == 0
         # Note n_heads * val_dim == embedding_dim so input to project_out is embedding_dim
         self.project_out = nn.Linear(embedding_dim, embedding_dim, bias=False)
@@ -127,6 +127,7 @@ class AttentionModel(nn.Module):
         using DataParallel as the results may be of different lengths on different GPUs
         :return:
         """
+
         if self.checkpoint_encoder and self.training:  # Only checkpoint if we need gradients
             embeddings, _ = checkpoint(self.embedder, self._init_embed(input))
         else:
@@ -198,7 +199,7 @@ class AttentionModel(nn.Module):
         # Calculate log_likelihood
         return log_p.sum(1) 
 
-    def _init_embed(self, input):
+    def _init_embed(self, input): # ! embed the input demand for each task node / city node with the location information
         
         if self.is_vrp or self.is_orienteering or self.is_pctsp:
             if self.is_vrp:
@@ -238,7 +239,7 @@ class AttentionModel(nn.Module):
 
         # Perform decoding steps
         i = 0
-        while not (self.shrink_size is None and state.all_finished()): # TODO check if state.all_finished() == True --> does this means when we run for graph_size time it will turn True?
+        while not (self.shrink_size is None and state.all_finished()): 
 
             if self.shrink_size is not None:
                 unfinished = torch.nonzero(state.get_finished() == 0)
@@ -255,7 +256,6 @@ class AttentionModel(nn.Module):
 
             # Select the indices of the next nodes in the sequences, result (batch_size) long
             selected = self._select_node(log_p.exp()[:, 0, :], mask[:, 0, :])  # Squeeze out steps dimension
-
             state = state.update(selected) # ! Update the state; (prev_a etc)
 
             # Now make log_p, selected desired output size by 'unshrinking'
@@ -313,7 +313,6 @@ class AttentionModel(nn.Module):
         return selected
 
     def _precompute(self, embeddings, num_steps=1): # embeddings.size = [batch_size, graph_size, embed_dim]
-        
         # The fixed context projection of the graph embedding is calculated only once for efficiency
         graph_embed = embeddings.mean(1) # graph_embed.size = [batch_size, embed_dim] 
         # fixed context = (batch_size, 1, embed_dim) to make broadcastable with parallel timesteps
@@ -323,8 +322,9 @@ class AttentionModel(nn.Module):
         # ! self.project_node_embeddings = nn.Linear(embedding_dim, 3 * embedding_dim, bias=False)
         # ! glimpse_key_fixed.shape = [batch_size, 1, graph_size, embed_dim], for each node we still have 128*1 embeddings
         # ! extract K Q W from embeddings absed on linear transformation
+        # ! for CVRP this line is still calculate the K Q logit_K based on the context
         glimpse_key_fixed, glimpse_val_fixed, logit_key_fixed = \
-            self.project_node_embeddings(embeddings[:, None, :, :]).chunk(3, dim=-1)
+            self.project_node_embeddings(embeddings[:, None, :, :]).chunk(3, dim=-1) 
 
         # No need to rearrange key for logit as there is a single head
         # ! fixed_attention_node_data is to reshape the K Q W (n_heads, batch_size, num_steps, graph_size, head_dim)
@@ -333,7 +333,7 @@ class AttentionModel(nn.Module):
             self._make_heads(glimpse_val_fixed, num_steps),
             logit_key_fixed.contiguous()
         )
-        # ! use AttentionModelFixed to pack fixed_attention_node_data into an object
+        # ! use AttentionModelFixed to pack fixed_attention_node_data into an object; for CVRP AttentionModelFixed objct only stores the  K Q logit_K (without demand information)
         return AttentionModelFixed(embeddings, fixed_context, *fixed_attention_node_data)
 
     def _get_log_p_topk(self, fixed, state, k=None, normalize=True):
@@ -352,8 +352,9 @@ class AttentionModel(nn.Module):
     def _get_log_p(self, fixed, state, normalize=True):
 
         # Compute query = context node embedding; # ! query.size = [batch_size, 1, embed_dim]
+
         query = fixed.context_node_projected + \
-                self.project_step_context(self._get_parallel_step_context(fixed.node_embeddings, state))
+                self.project_step_context(self._get_parallel_step_context(fixed.node_embeddings, state)) # ! get first and last node embeddings
 
         # Compute keys and values for the nodes
         glimpse_K, glimpse_V, logit_K = self._get_attention_node_data(fixed, state)
@@ -363,7 +364,6 @@ class AttentionModel(nn.Module):
 
         # Compute logits (unnormalized log_p) # ! log_p.shape = [batch_size, 1, graph_size]; glimpse.size = [batch_size, 1, embed_dim]
         log_p, glimpse = self._one_to_many_logits(query, glimpse_K, glimpse_V, logit_K, mask)
-
         if normalize:
             log_p = torch.log_softmax(log_p / self.temp, dim=-1)
 
@@ -462,7 +462,7 @@ class AttentionModel(nn.Module):
 
         # Compute the glimpse, rearrange dimensions so the dimensions are (n_heads, batch_size, num_steps, 1, key_size)
         glimpse_Q = query.view(batch_size, num_steps, self.n_heads, 1, key_size).permute(2, 0, 1, 3, 4)
-
+        
         # Batch matrix multiplication to compute compatibilities (n_heads, batch_size, num_steps, graph_size)
         compatibility = torch.matmul(glimpse_Q, glimpse_K.transpose(-2, -1)) / math.sqrt(glimpse_Q.size(-1))
         if self.mask_inner:
@@ -493,15 +493,17 @@ class AttentionModel(nn.Module):
 
     def _get_attention_node_data(self, fixed, state):
 
-        if self.is_vrp and self.allow_partial:
+        if self.is_vrp and self.allow_partial: #! self.allow_partial means we are solving split CVRP
 
             # Need to provide information of how much each node has already been served
             # Clone demands as they are needed by the backprop whereas they are updated later
+
+            # ! self.project_node_step = nn.Linear(1, 3 * embedding_dim, bias=False) 
             glimpse_key_step, glimpse_val_step, logit_key_step = \
-                self.project_node_step(state.demands_with_depot[:, :, :, None].clone()).chunk(3, dim=-1)
+                self.project_node_step(state.demands_with_depot[:, :, :, None].clone()).chunk(3, dim=-1) # ! state.demands_with_depot[:, :, :, None].clone() --> dynamic demands per node
 
             # Projection of concatenation is equivalent to addition of projections but this is more efficient
-            return (
+            return ( # ! self._make_heads is to devide the information to different heads; ATT TSP paper split information for different heads and concat the output together to get the output feature of the same shape
                 fixed.glimpse_key + self._make_heads(glimpse_key_step),
                 fixed.glimpse_val + self._make_heads(glimpse_val_step),
                 fixed.logit_key + logit_key_step,

@@ -67,6 +67,7 @@ def clip_grad_norms(param_groups, max_norm=math.inf):
     :param gradient_norms_log:
     :return: grad_norms, clipped_grad_norms: list with (clipped) gradient norms per group
     """
+
     grad_norms = [
         torch.nn.utils.clip_grad_norm_(
             group['params'],
@@ -89,15 +90,15 @@ def train_epoch(model, optimizer, baseline, lr_scheduler, epoch, val_dataset, pr
 
     # Generate new training data for each epoch
     training_dataset = baseline.wrap_dataset(problem.make_dataset(
-        size=opts.graph_size, num_samples=opts.epoch_size, distribution=opts.data_distribution, embed_type=opts.embed, grid_num=opts.grid_num))
+        size=opts.graph_size, num_samples=opts.epoch_size, distribution=opts.data_distribution, filename=opts.train_dataset, embed_type=opts.embed, grid_num=opts.grid_num))
     training_dataloader = DataLoader(training_dataset, batch_size=opts.batch_size, num_workers=1)
 
     # Put model in train mode!
     model.train()
-    set_decode_type(model, "sampling")
+    set_decode_type(model, "sampling") # TODO change back to sampling
     
     for batch_id, batch in enumerate(tqdm(training_dataloader, disable=opts.no_progress_bar)):
-        
+     
         train_batch(
             model,
             optimizer,
@@ -133,7 +134,10 @@ def train_epoch(model, optimizer, baseline, lr_scheduler, epoch, val_dataset, pr
     if not opts.no_tensorboard:
         tb_logger.log_value('val_avg_reward', avg_reward, step)
 
-    baseline.epoch_callback(model, epoch)
+    # baseline.epoch_callback(model, epoch)
+    candidate_mean = baseline.epoch_callback(model, epoch)
+    if candidate_mean is not None:
+        tb_logger.log_value('basedline cost/candidate_mean', candidate_mean, epoch)
 
     # lr_scheduler should be called at end of epoch
     lr_scheduler.step()
@@ -151,24 +155,25 @@ def train_batch(
         opts
 ):
     x, bl_val = baseline.unwrap_batch(batch)
-
-    x[0] = move_to(x[0], opts.device)
-    x[1] = move_to(x[1], opts.device)
+    
+    if len(x) == 2:
+        x[0] = move_to(x[0], opts.device)
+        x[1] = move_to(x[1], opts.device)
+    else:
+        x = move_to(x, opts.device)
     bl_val = move_to(bl_val, opts.device) if bl_val is not None else None
-
+    
     # Evaluate model, get costs and log probabilities # ! log_likelihood/ cost --> size [batch_size]
     cost, log_likelihood = model(x) # ! log_likelihood.requires_grad = True; cost.requires_grad = False
     
     # Evaluate baseline, get baseline loss if any (only for critic) 
     # ! TSP default basedline --- rollout 
     # ! initialize : bl_val = cost.mean()
-
     bl_val, bl_loss = baseline.eval(x, cost) if bl_val is None else (bl_val, 0)
-
-    # Calculate loss
+    
+    # Calculate loss 
     reinforce_loss = ((cost - bl_val) * log_likelihood).mean()
-    loss = reinforce_loss + bl_loss
-
+    loss = reinforce_loss + bl_loss 
     # Perform backward pass and optimization step
     optimizer.zero_grad()
     loss.backward()
@@ -178,5 +183,5 @@ def train_batch(
 
     # Logging
     if step % int(opts.log_step) == 0:
-        log_values(cost, grad_norms, epoch, batch_id, step,
+        log_values(bl_val, loss, cost, grad_norms, epoch, batch_id, step,
                    log_likelihood, reinforce_loss, bl_loss, tb_logger, opts)

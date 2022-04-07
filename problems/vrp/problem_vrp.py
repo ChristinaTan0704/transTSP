@@ -165,7 +165,7 @@ def make_instance(args):
 
 class VRPDataset(Dataset):
     
-    def __init__(self, filename=None, size=50, num_samples=1000000, offset=0, distribution=None):
+    def __init__(self, filename=None, size=50, num_samples=1000000, offset=0, distribution=None, embed_type="coord", grid_num=20):
         super(VRPDataset, self).__init__()
 
         self.data_set = []
@@ -185,7 +185,7 @@ class VRPDataset(Dataset):
                 50: 40.,
                 100: 50.
             }
-
+        
             self.data = [
                 {
                     'loc': torch.FloatTensor(size, 2).uniform_(0, 1),
