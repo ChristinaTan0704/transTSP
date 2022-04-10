@@ -8,7 +8,8 @@ def get_options(args=None):
     parser = argparse.ArgumentParser(
         description="Attention based model for solving the Travelling Salesman Problem with Reinforcement Learning")
     # Input type
-    parser.add_argument('--embed', default='', help="embed 'heatmap' or 2d coordinate")
+    parser.add_argument('--embed', default='coord', help="embed 'heatmap' 'heatmap_coord' 'ViT_heatmap_coord' or 2d coordinate")
+    parser.add_argument('--heatmap_path', default='', help="heatmap stored path")
     parser.add_argument('--grid_num', type=int, default=20, help="how many grid per row/ col to create in the heatmap")
     
     # Data

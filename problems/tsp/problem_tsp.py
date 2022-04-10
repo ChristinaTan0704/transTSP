@@ -11,7 +11,7 @@ class TSP(object):
     NAME = 'tsp'
 
     @staticmethod
-    def get_costs(dataset, pi): # TODO change the way to calculate cost here 
+    def get_costs(dataset, pi): 
         # Check that tours are valid, i.e. contain 0 to n -1
         assert (
             torch.arange(pi.size(1), out=pi.data.new()).view(1, -1).expand_as(pi) ==
@@ -53,11 +53,11 @@ class TSP(object):
 
 class TSPDataset(Dataset):
     
-    def __init__(self, filename=None, size=50, num_samples=1000000, offset=0, distribution=None, embed_type="coord", grid_num=20):
+    def __init__(self, filename=None, size=50, num_samples=1000000, offset=0, distribution=None, opts=None):
         super(TSPDataset, self).__init__()
         
         self.data_set = []
-        self.embed_type = embed_type
+        self.embed_type = opts.embed
 
         if filename is not None:
             assert os.path.splitext(filename)[1] == '.pkl'
@@ -68,14 +68,15 @@ class TSPDataset(Dataset):
         else:
             # Sample points randomly in [0, 1] square
             self.data = [torch.FloatTensor(size, 2).uniform_(0, 1) for i in range(num_samples)]
-        if embed_type == "heatmap":
-            self.heatmap = torch.FloatTensor(coord_to_heatmap(self.data, grid_num))
+        
+        if "heatmap" in self.embed_type:
+            self.heatmap = torch.FloatTensor(coord_to_heatmap(self.data, opts.grid_num, opts.heatmap_path))
 
         if len(self.data) <= 100:
             # Try to get more sample 
-            self.data = [self.data[0] for i in range(1024)]
-            if embed_type == "heatmap":
-                self.heatmap = [self.heatmap[0] for i in range(1024)]
+            self.data = [self.data[0] for i in range(1024)] 
+            if "heatmap" in self.embed_type:
+                self.heatmap = [self.heatmap[0] for i in range(1024)] 
         self.size = len(self.data)
 
 
@@ -83,7 +84,7 @@ class TSPDataset(Dataset):
         return self.size
 
     def __getitem__(self, idx):
-        if self.embed_type == "heatmap":
+        if "heatmap" in self.embed_type:
             return self.data[idx], self.heatmap[idx]
         else:
             return self.data[idx]

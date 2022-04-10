@@ -155,8 +155,7 @@ class RolloutBaseline(Baseline):
 
     def _update_model(self, model, epoch, dataset=None):
         self.model = copy.deepcopy(model)
-        # Always generate baseline dataset when updating model to prevent overfitting to the baseline dataset
-        
+        # ! Always generate baseline dataset when updating model to prevent overfitting to the baseline dataset
         if dataset is not None:
             if len(dataset) != self.opts.val_size:
                 print("Warning: not using saved baseline dataset since val_size does not match")
@@ -167,7 +166,7 @@ class RolloutBaseline(Baseline):
 
         if dataset is None:
             self.dataset = self.problem.make_dataset(
-                size=self.opts.graph_size, num_samples=self.opts.val_size, filename=self.opts.train_dataset, distribution=self.opts.data_distribution, embed_type=self.opts.embed, grid_num=self.opts.grid_num)
+                size=self.opts.graph_size, num_samples=self.opts.val_size, filename=self.opts.train_dataset, distribution=self.opts.data_distribution, opts=self.opts)
         else:
             self.dataset = dataset
         print("Evaluating baseline model on evaluation dataset")

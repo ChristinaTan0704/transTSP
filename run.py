@@ -19,8 +19,8 @@ from mapd.lib.transTSP.utils import torch_load_cpu, load_problem
 
 
 def run(opts):
-
     # Pretty print the run args
+    opts.run_name = "{}{}_{}_{}_{}".format(opts.problem, opts.graph_size, opts.baseline, opts.embed, opts.run_name)
     pp.pprint(vars(opts))
 
     # Set the random seed
@@ -51,7 +51,7 @@ def run(opts):
         load_data = torch_load_cpu(load_path)
 
     # Initialize model
-    if opts.embed == "heatmap":
+    if "heatmap" in opts.embed:
         model_class = {
             'attention': HeatmapAttentionModel,
             'pointer': PointerNetwork
@@ -62,7 +62,7 @@ def run(opts):
             'pointer': PointerNetwork
         }.get(opts.model, None)
     assert model_class is not None, "Unknown model: {}".format(model_class)
-    if opts.embed == "heatmap":
+    if "heatmap" in opts.embed:
             model = model_class(
             opts.embedding_dim,
             opts.hidden_dim,
@@ -74,7 +74,7 @@ def run(opts):
             tanh_clipping=opts.tanh_clipping,
             checkpoint_encoder=opts.checkpoint_encoder,
             shrink_size=opts.shrink_size,
-            grid_num=opts.grid_num
+            opts=opts
         ).to(opts.device)
     else:
         model = model_class(
@@ -160,7 +160,7 @@ def run(opts):
 
     # Start the actual training loop
     val_dataset = problem.make_dataset(
-        size=opts.graph_size, num_samples=opts.val_size, filename=opts.val_dataset, distribution=opts.data_distribution, embed_type=opts.embed, grid_num=opts.grid_num)
+        size=opts.graph_size, num_samples=opts.val_size, filename=opts.val_dataset, distribution=opts.data_distribution, opts=opts)
 
     if opts.resume:
         epoch_resume = int(os.path.splitext(os.path.split(opts.resume)[-1])[0].split("-")[1])
