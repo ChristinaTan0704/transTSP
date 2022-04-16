@@ -1,4 +1,5 @@
 {
+ "embed":"coord",
  "resume": null,
  "use_cuda": true,
  "lr_critic": 0.0001,

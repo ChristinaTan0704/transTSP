@@ -1,3 +1,4 @@
+from turtle import pd
 import warnings
 
 import torch
@@ -8,7 +9,7 @@ from tqdm import tqdm
 from multiprocessing.dummy import Pool as ThreadPool
 from multiprocessing import Pool
 import torch.nn.functional as F
-
+from mapd.utils.general_utils import dict2obj
 
 def load_problem(name):
     from mapd.lib.transTSP.problems import TSP, CVRP, SDVRP, OP, PCTSPDet, PCTSPStoch
@@ -65,7 +66,6 @@ def _load_model_file(load_path, model):
 def load_args(filename):
     with open(filename, 'r') as f:
         args = json.load(f)
-
     # Backwards compatibility
     if 'data_distribution' not in args:
         args['data_distribution'] = None
@@ -77,6 +77,7 @@ def load_args(filename):
 
 
 def load_model(path, epoch=None):
+    from mapd.model.heatmap_att import HeatmapAttentionModel
     from mapd.lib.transTSP.nets.attention_model import AttentionModel
     from mapd.lib.transTSP.nets.pointer_network import PointerNetwork
 
@@ -97,25 +98,45 @@ def load_model(path, epoch=None):
     args = load_args(os.path.join(path, 'args.json'))
 
     problem = load_problem(args['problem'])
-
-    model_class = {
-        'attention': AttentionModel,
-        'pointer': PointerNetwork
-    }.get(args.get('model', 'attention'), None)
+    # TODO check how train get the model and why here would use different innr embedding
+    if "heatmap" in args["embed"]:
+        model_class = {
+            'attention': HeatmapAttentionModel,
+            'pointer': PointerNetwork
+        }.get('attention', None)
+    else:
+        model_class = {
+            'attention': AttentionModel,
+            'pointer': PointerNetwork
+        }.get('attention', None)
     assert model_class is not None, "Unknown model: {}".format(model_class)
-
-    model = model_class(
-        args['embedding_dim'],
-        args['hidden_dim'],
-        problem,
-        n_encode_layers=args['n_encode_layers'],
-        mask_inner=True,
-        mask_logits=True,
-        normalization=args['normalization'],
-        tanh_clipping=args['tanh_clipping'],
-        checkpoint_encoder=args.get('checkpoint_encoder', False),
-        shrink_size=args.get('shrink_size', None)
-    )
+    if "heatmap" in args["embed"]:
+        model = model_class(
+            args['embedding_dim'],
+            args['hidden_dim'],
+            problem,
+            n_encode_layers=args['n_encode_layers'],
+            mask_inner=True,
+            mask_logits=True,
+            normalization=args['normalization'],
+            tanh_clipping=args['tanh_clipping'],
+            checkpoint_encoder=args.get('checkpoint_encoder', False),
+            shrink_size=args.get('shrink_size', None),
+            opts=dict2obj(args)
+        )
+    else:
+        model = model_class(
+            args['embedding_dim'],
+            args['hidden_dim'],
+            problem,
+            n_encode_layers=args['n_encode_layers'],
+            mask_inner=True,
+            mask_logits=True,
+            normalization=args['normalization'],
+            tanh_clipping=args['tanh_clipping'],
+            checkpoint_encoder=args.get('checkpoint_encoder', False),
+            shrink_size=args.get('shrink_size', None)
+        )
     # Overwrite model parameters by parameters to load
     load_data = torch_load_cpu(model_filename)
     model.load_state_dict({**model.state_dict(), **load_data.get('model', {})})

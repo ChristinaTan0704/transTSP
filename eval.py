@@ -40,7 +40,6 @@ def get_best(sequences, cost, ids=None, batch_size=None):
 
 def eval_dataset_mp(args):
     (dataset_path, width, softmax_temp, opts, i, num_processes) = args
-
     model, _ = load_model(opts.model)
     val_size = opts.val_size // num_processes
     dataset = model.problem.make_dataset(filename=dataset_path, num_samples=val_size, opts=opts)
@@ -104,7 +103,7 @@ def eval_dataset(dataset_path, width, softmax_temp, opts):
 
 
 def _eval_dataset(model, dataset, width, softmax_temp, opts, device):
-
+    import pdb; pdb.set_trace()
     model.to(device)
     model.eval()
 
@@ -116,7 +115,13 @@ def _eval_dataset(model, dataset, width, softmax_temp, opts, device):
 
     results = []
     for batch in tqdm(dataloader, disable=opts.no_progress_bar):
-        batch = move_to(batch, device)
+        if "heatmap" in opts.embed:
+            x, bl_val = batch
+            x = move_to(x, device)
+            bl_val = move_to(bl_val, device) if bl_val is not None else None
+            batch = [x, bl_val]
+        else:
+            batch = move_to(batch, device)
 
         start = time.time()
         with torch.no_grad():
@@ -177,7 +182,11 @@ def _eval_dataset(model, dataset, width, softmax_temp, opts, device):
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("datasets", nargs='+', help="Filename of the dataset(s) to evaluate")
+    parser.add_argument('--embed', default='coord', help="embed 'heatmap' 'heatmap_coord' 'ViT_heatmap_coord' or 2d coordinate")
+    parser.add_argument('--heatmap_path', default='', help="heatmap stored path")
+    parser.add_argument('--grid_num', type=int, default=20, help="how many grid per row/ col to create in the heatmap")
+    parser.add_argument('--graph_size', type=int, default=20, help="The size of the problem graph") 
+    parser.add_argument("--datasets", nargs='+', help="Filename of the dataset(s) to evaluate")
     parser.add_argument("-f", action='store_true', help="Set true to overwrite")
     parser.add_argument("-o", default=None, help="Name of the results file to write")
     parser.add_argument('--val_size', type=int, default=10000,

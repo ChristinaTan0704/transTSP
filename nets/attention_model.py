@@ -226,6 +226,7 @@ class AttentionModel(nn.Module):
         """
         calculate the node selected probability and selected sequences based on embeddings
         """
+
         outputs = []
         sequences = []
         # ! state --- a class that helps to computer the cost sth
@@ -283,6 +284,7 @@ class AttentionModel(nn.Module):
         """
         # Bit ugly but we need to pass the embeddings as well.
         # Making a tuple will not work with the problem.get_cost function
+        import pdb; pdb.set_trace()
         return sample_many(
             lambda input: self._inner(*input),  # Need to unpack tuple into arguments
             lambda input, pi: self.problem.get_costs(input[0], pi),  # Don't need embeddings as input to get_costs

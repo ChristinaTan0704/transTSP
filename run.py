@@ -37,7 +37,10 @@ def run(opts):
         json.dump(vars(opts), f, indent=True)
 
     # Set the device
-    opts.device = torch.device("cuda:0" if opts.use_cuda else "cpu")
+    try:
+        opts.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    except:
+        opts.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     # Figure out what's the problem
     problem = load_problem(opts.problem)

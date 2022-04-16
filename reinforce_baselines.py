@@ -150,7 +150,6 @@ class RolloutBaseline(Baseline):
 
         self.problem = problem
         self.opts = opts
-
         self._update_model(model, epoch)
 
     def _update_model(self, model, epoch, dataset=None):
@@ -163,14 +162,14 @@ class RolloutBaseline(Baseline):
             elif (dataset[0] if self.problem.NAME == 'tsp' else dataset[0]['loc']).size(0) != self.opts.graph_size:
                 print("Warning: not using saved baseline dataset since graph_size does not match")
                 dataset = None
-
+        # TODO check why memory used up here
         if dataset is None:
             self.dataset = self.problem.make_dataset(
                 size=self.opts.graph_size, num_samples=self.opts.val_size, filename=self.opts.train_dataset, distribution=self.opts.data_distribution, opts=self.opts)
         else:
             self.dataset = dataset
         print("Evaluating baseline model on evaluation dataset")
-
+        
         self.bl_vals = rollout(self.model, self.dataset, self.opts).cpu().numpy()
         self.mean = self.bl_vals.mean()
         self.epoch = epoch

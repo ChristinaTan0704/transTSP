@@ -1,5 +1,6 @@
 from torch.utils.data import Dataset
 import torch
+import numpy as np
 import os
 import pickle
 from mapd.lib.transTSP.problems.tsp.state_tsp import StateTSP
@@ -58,6 +59,7 @@ class TSPDataset(Dataset):
         
         self.data_set = []
         self.embed_type = opts.embed
+        self.grid_num = opts.grid_num
 
         if filename is not None:
             assert os.path.splitext(filename)[1] == '.pkl'
@@ -70,13 +72,11 @@ class TSPDataset(Dataset):
             self.data = [torch.FloatTensor(size, 2).uniform_(0, 1) for i in range(num_samples)]
         
         if "heatmap" in self.embed_type:
-            self.heatmap = torch.FloatTensor(coord_to_heatmap(self.data, opts.grid_num, opts.heatmap_path))
+            self.coord_heatmap =  coord_to_heatmap( opts.grid_num, opts.heatmap_path)
 
         if len(self.data) <= 100:
             # Try to get more sample 
             self.data = [self.data[0] for i in range(1024)] 
-            if "heatmap" in self.embed_type:
-                self.heatmap = [self.heatmap[0] for i in range(1024)] 
         self.size = len(self.data)
 
 
@@ -85,8 +85,17 @@ class TSPDataset(Dataset):
 
     def __getitem__(self, idx):
         if "heatmap" in self.embed_type:
-            return self.data[idx], self.heatmap[idx]
+            
+            one_instance_heatmap = []
+            for one_data in self.data[idx]:
+                x, y = int(one_data[0]*self.grid_num), int(one_data[1]*self.grid_num)
+                # when using the original generate_data.py data's coordnate can be up to 1
+                if x == self.grid_num:
+                    x -= 1
+                if y == self.grid_num:
+                    y -= 1
+                one_instance_heatmap.append(self.coord_heatmap[x][y])
+            return self.data[idx], torch.FloatTensor(np.array(one_instance_heatmap))
         else:
-            return self.data[idx]
-
+            return self.data[idx] 
 
