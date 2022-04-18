@@ -156,13 +156,21 @@ class RolloutBaseline(Baseline):
         self.model = copy.deepcopy(model)
         # ! Always generate baseline dataset when updating model to prevent overfitting to the baseline dataset
         if dataset is not None:
-            if len(dataset) != self.opts.val_size:
-                print("Warning: not using saved baseline dataset since val_size does not match")
-                dataset = None
-            elif (dataset[0] if self.problem.NAME == 'tsp' else dataset[0]['loc']).size(0) != self.opts.graph_size:
-                print("Warning: not using saved baseline dataset since graph_size does not match")
-                dataset = None
-        # TODO check why memory used up here
+            if "heatmap" in self.opts.embed:
+                
+                if len(dataset) != self.opts.val_size:
+                    print("Warning: not using saved baseline dataset since val_size does not match")
+                    dataset = None
+                elif (dataset[0][0] if self.problem.NAME == 'tsp' else dataset[0][0]['loc']).size(0) != self.opts.graph_size:
+                    print("Warning: not using saved baseline dataset since graph_size does not match")
+                    dataset = None
+            else:
+                if len(dataset) != self.opts.val_size:
+                    print("Warning: not using saved baseline dataset since val_size does not match")
+                    dataset = None
+                elif (dataset[0] if self.problem.NAME == 'tsp' else dataset[0]['loc']).size(0) != self.opts.graph_size:
+                    print("Warning: not using saved baseline dataset since graph_size does not match")
+                    dataset = None
         if dataset is None:
             self.dataset = self.problem.make_dataset(
                 size=self.opts.graph_size, num_samples=self.opts.val_size, filename=self.opts.train_dataset, distribution=self.opts.data_distribution, opts=self.opts)

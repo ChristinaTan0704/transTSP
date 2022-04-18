@@ -20,7 +20,7 @@ from mapd.lib.transTSP.utils import torch_load_cpu, load_problem
 
 def run(opts):
     # Pretty print the run args
-    opts.run_name = "{}{}_{}_{}_{}".format(opts.problem, opts.graph_size, opts.baseline, opts.embed, opts.run_name)
+    opts.run_name = "{}{}_{}_{}_{}_{}".format(opts.problem, opts.graph_size, opts.baseline, opts.embed, opts.loss, opts.run_name)
     pp.pprint(vars(opts))
 
     # Set the random seed
@@ -181,6 +181,7 @@ def run(opts):
         validate(model, val_dataset, opts)
     else:
         for epoch in range(opts.epoch_start, opts.epoch_start + opts.n_epochs):
+
             train_epoch(
                 model,
                 optimizer,

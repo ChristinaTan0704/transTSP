@@ -161,7 +161,7 @@ def train_batch(
     else:
         x = move_to(x, opts.device)
     bl_val = move_to(bl_val, opts.device) if bl_val is not None else None
-    
+
     # Evaluate model, get costs and log probabilities # ! log_likelihood/ cost --> size [batch_size]
     cost, log_likelihood = model(x) # ! log_likelihood.requires_grad = True; cost.requires_grad = False
     
@@ -169,8 +169,8 @@ def train_batch(
     # ! TSP default basedline --- rollout 
     # ! initialize : bl_val = cost.mean()
     bl_val, bl_loss = baseline.eval(x, cost) if bl_val is None else (bl_val, 0)
-    
     # Calculate loss 
+    # ! cost is a batch_size * 1 array, so we need to take the mean() to get the loss
     reinforce_loss = ((cost - bl_val) * log_likelihood).mean()
     loss = reinforce_loss + bl_loss 
     # Perform backward pass and optimization step

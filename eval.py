@@ -103,7 +103,6 @@ def eval_dataset(dataset_path, width, softmax_temp, opts):
 
 
 def _eval_dataset(model, dataset, width, softmax_temp, opts, device):
-    import pdb; pdb.set_trace()
     model.to(device)
     model.eval()
 
