@@ -122,7 +122,7 @@ class AttentionModel(nn.Module):
 
     def forward(self, input, return_pi=False):
         """
-        :param input: (batch_size, graph_size, node_dim) input node features or dictionary with multiple tensors
+        :param input: (batch_size, task_size, node_dim) input node features or dictionary with multiple tensors
         :param return_pi: whether to return the output sequences, this is optional as it is not compatible with
         using DataParallel as the results may be of different lengths on different GPUs
         :return:
@@ -132,8 +132,8 @@ class AttentionModel(nn.Module):
             embeddings, _ = checkpoint(self.embedder, self._init_embed(input))
         else:
             embeddings, _ = self.embedder(self._init_embed(input))
-        # ! _log_p : the probability; _log_p.size = (batch_size, graph_size, graph_size); the probabilty to be selected at each round (round: 0 ~ graph_size)
-        # ! pi.size = (batch_size, graph_size); stores the TSP solution for all samples in a batch
+        # ! _log_p : the probability; _log_p.size = (batch_size, task_size, task_size); the probabilty to be selected at each round (round: 0 ~ task_size)
+        # ! pi.size = (batch_size, task_size); stores the TSP solution for all samples in a batch
         _log_p, pi = self._inner(input, embeddings) 
         
         cost, mask = self.problem.get_costs(input, pi) # ! cost is the L2 distance for the current output path; mask is None for TSP
@@ -187,7 +187,7 @@ class AttentionModel(nn.Module):
 
     def _calc_log_likelihood(self, _log_p, a, mask): # ! a : the output route
 
-        # Get log_p corresponding to selected actions # ! log_p.shape = [batch_size, graph_size]
+        # Get log_p corresponding to selected actions # ! log_p.shape = [batch_size, task_size]
         log_p = _log_p.gather(2, a.unsqueeze(-1)).squeeze(-1)
 
         # Optional: mask out actions irrelevant to objective so they do not get reinforced
@@ -253,7 +253,7 @@ class AttentionModel(nn.Module):
                     # Filter states
                     state = state[unfinished]
                     fixed = fixed[unfinished]
-            log_p, mask = self._get_log_p(fixed, state) # ! log_p.shape = [batch_size, 1, graph_size]
+            log_p, mask = self._get_log_p(fixed, state) # ! log_p.shape = [batch_size, 1, task_size]
 
             # Select the indices of the next nodes in the sequences, result (batch_size) long
             selected = self._select_node(log_p.exp()[:, 0, :], mask[:, 0, :])  # Squeeze out steps dimension
@@ -279,7 +279,7 @@ class AttentionModel(nn.Module):
 
     def sample_many(self, input, batch_rep=1, iter_rep=1):
         """
-        :param input: (batch_size, graph_size, node_dim) input node features
+        :param input: (batch_size, task_size, node_dim) input node features
         :return:
         """
         # Bit ugly but we need to pass the embeddings as well.
@@ -313,7 +313,7 @@ class AttentionModel(nn.Module):
             assert False, "Unknown decode type"
         return selected
 
-    def _precompute(self, embeddings, num_steps=1): # embeddings.size = [batch_size, graph_size, embed_dim]
+    def _precompute(self, embeddings, num_steps=1): # embeddings.size = [batch_size, task_size, embed_dim]
         # The fixed context projection of the graph embedding is calculated only once for efficiency
         graph_embed = embeddings.mean(1) # graph_embed.size = [batch_size, embed_dim] 
         # fixed context = (batch_size, 1, embed_dim) to make broadcastable with parallel timesteps
@@ -321,14 +321,14 @@ class AttentionModel(nn.Module):
 
         # The projection of the node embeddings for the attention is calculated once up front
         # ! self.project_node_embeddings = nn.Linear(embedding_dim, 3 * embedding_dim, bias=False)
-        # ! glimpse_key_fixed.shape = [batch_size, 1, graph_size, embed_dim], for each node we still have 128*1 embeddings
+        # ! glimpse_key_fixed.shape = [batch_size, 1, task_size, embed_dim], for each node we still have 128*1 embeddings
         # ! extract K Q W from embeddings absed on linear transformation
         # ! for CVRP this line is still calculate the K Q logit_K based on the context
         glimpse_key_fixed, glimpse_val_fixed, logit_key_fixed = \
             self.project_node_embeddings(embeddings[:, None, :, :]).chunk(3, dim=-1) 
 
         # No need to rearrange key for logit as there is a single head
-        # ! fixed_attention_node_data is to reshape the K Q W (n_heads, batch_size, num_steps, graph_size, head_dim)
+        # ! fixed_attention_node_data is to reshape the K Q W (n_heads, batch_size, num_steps, task_size, head_dim)
         fixed_attention_node_data = (
             self._make_heads(glimpse_key_fixed, num_steps),
             self._make_heads(glimpse_val_fixed, num_steps),
@@ -363,7 +363,7 @@ class AttentionModel(nn.Module):
         # Compute the mask
         mask = state.get_mask()
 
-        # Compute logits (unnormalized log_p) # ! log_p.shape = [batch_size, 1, graph_size]; glimpse.size = [batch_size, 1, embed_dim]
+        # Compute logits (unnormalized log_p) # ! log_p.shape = [batch_size, 1, task_size]; glimpse.size = [batch_size, 1, embed_dim]
         log_p, glimpse = self._one_to_many_logits(query, glimpse_K, glimpse_V, logit_K, mask)
         if normalize:
             log_p = torch.log_softmax(log_p / self.temp, dim=-1)
@@ -376,7 +376,7 @@ class AttentionModel(nn.Module):
         """
         Returns the context per step, optionally for multiple steps at once (for efficient evaluation of the model)
         
-        :param embeddings: (batch_size, graph_size, embed_dim)
+        :param embeddings: (batch_size, task_size, embed_dim)
         :param prev_a: (batch_size, num_steps)
         :param first_a: Only used when num_steps = 1, action of first step or None if first step
         :return: (batch_size, num_steps, context_dim)
@@ -464,7 +464,7 @@ class AttentionModel(nn.Module):
         # Compute the glimpse, rearrange dimensions so the dimensions are (n_heads, batch_size, num_steps, 1, key_size)
         glimpse_Q = query.view(batch_size, num_steps, self.n_heads, 1, key_size).permute(2, 0, 1, 3, 4)
         
-        # Batch matrix multiplication to compute compatibilities (n_heads, batch_size, num_steps, graph_size)
+        # Batch matrix multiplication to compute compatibilities (n_heads, batch_size, num_steps, task_size)
         compatibility = torch.matmul(glimpse_Q, glimpse_K.transpose(-2, -1)) / math.sqrt(glimpse_Q.size(-1))
         if self.mask_inner:
             assert self.mask_logits, "Cannot mask inner without masking logits"
@@ -480,7 +480,7 @@ class AttentionModel(nn.Module):
         # Now projecting the glimpse is not needed since this can be absorbed into project_out
         # final_Q = self.project_glimpse(glimpse)
         final_Q = glimpse
-        # Batch matrix multiplication to compute logits (batch_size, num_steps, graph_size)
+        # Batch matrix multiplication to compute logits (batch_size, num_steps, task_size)
         # logits = 'compatibility'
         logits = torch.matmul(final_Q, logit_K.transpose(-2, -1)).squeeze(-2) / math.sqrt(final_Q.size(-1))
 
@@ -519,5 +519,5 @@ class AttentionModel(nn.Module):
         return (
             v.contiguous().view(v.size(0), v.size(1), v.size(2), self.n_heads, -1)
             .expand(v.size(0), v.size(1) if num_steps is None else num_steps, v.size(2), self.n_heads, -1)
-            .permute(3, 0, 1, 2, 4)  # (n_heads, batch_size, num_steps, graph_size, head_dim)
+            .permute(3, 0, 1, 2, 4)  # (n_heads, batch_size, num_steps, task_size, head_dim)
         )

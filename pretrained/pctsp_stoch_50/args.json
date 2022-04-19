@@ -1,6 +1,6 @@
 {
  "problem": "pctsp_stoch",
- "graph_size": 50,
+ "task_size": 50,
  "batch_size": 512,
  "epoch_size": 1280000,
  "val_size": 10000,

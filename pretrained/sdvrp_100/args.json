@@ -11,7 +11,7 @@
  "output_dir": "outputs",
  "val_size": 10000,
  "bl_alpha": 0.05,
- "graph_size": 100,
+ "task_size": 100,
  "normalization": "batch",
  "load_path": null,
  "batch_size": 256,

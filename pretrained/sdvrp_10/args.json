@@ -25,7 +25,7 @@
  "load_path": null,
  "embedding_dim": 128,
  "baseline": "rollout",
- "graph_size": 10,
+ "task_size": 10,
  "eval_only": false,
  "lr_model": 0.0001,
  "save_dir": "",

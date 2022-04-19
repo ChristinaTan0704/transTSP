@@ -13,7 +13,7 @@
  "seed": 1235,
  "max_grad_norm": 1.0,
  "output_dir": "outputs",
- "graph_size": 20,
+ "task_size": 20,
  "no_progress_bar": true,
  "lr_decay": 1.0,
  "checkpoint_epochs": 50,

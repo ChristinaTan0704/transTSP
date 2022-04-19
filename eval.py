@@ -184,7 +184,7 @@ if __name__ == "__main__":
     parser.add_argument('--embed', default='coord', help="embed 'heatmap' 'heatmap_coord' 'ViT_heatmap_coord' or 2d coordinate")
     parser.add_argument('--heatmap_path', default='', help="heatmap stored path")
     parser.add_argument('--grid_num', type=int, default=20, help="how many grid per row/ col to create in the heatmap")
-    parser.add_argument('--graph_size', type=int, default=20, help="The size of the problem graph") 
+    parser.add_argument('--task_size', type=int, default=20, help="The size of the problem graph") 
     parser.add_argument("--datasets", nargs='+', help="Filename of the dataset(s) to evaluate")
     parser.add_argument("-f", action='store_true', help="Set true to overwrite")
     parser.add_argument("-o", default=None, help="Name of the results file to write")

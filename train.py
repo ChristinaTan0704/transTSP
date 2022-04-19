@@ -89,7 +89,7 @@ def train_epoch(model, optimizer, baseline, lr_scheduler, epoch, val_dataset, pr
         tb_logger.log_value('learnrate_pg0', optimizer.param_groups[0]['lr'], step)
     # Generate new training data for each epoch
     training_dataset = baseline.wrap_dataset(problem.make_dataset(
-        size=opts.graph_size, num_samples=opts.epoch_size, distribution=opts.data_distribution, filename=opts.train_dataset, opts=opts))
+        size=opts.task_size, num_samples=opts.epoch_size, distribution=opts.data_distribution, filename=opts.train_dataset, opts=opts))
     training_dataloader = DataLoader(training_dataset, batch_size=opts.batch_size, num_workers=1)
 
     # Put model in train mode!
@@ -161,7 +161,6 @@ def train_batch(
     else:
         x = move_to(x, opts.device)
     bl_val = move_to(bl_val, opts.device) if bl_val is not None else None
-
     # Evaluate model, get costs and log probabilities # ! log_likelihood/ cost --> size [batch_size]
     cost, log_likelihood = model(x) # ! log_likelihood.requires_grad = True; cost.requires_grad = False
     

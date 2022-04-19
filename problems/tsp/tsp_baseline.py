@@ -271,13 +271,13 @@ def calc_batch_pdist(dataset):
 def nearest_neighbour(dataset, start='first'):
     dist = calc_batch_pdist(dataset)
 
-    batch_size, graph_size, _ = dataset.size()
+    batch_size, task_size, _ = dataset.size()
 
     total_dist = dataset.new(batch_size).zero_()
 
     if not isinstance(start, torch.Tensor):
         if start == 'random':
-            start = dataset.new().long().new(batch_size).zero_().random_(0, graph_size)
+            start = dataset.new().long().new(batch_size).zero_().random_(0, task_size)
         elif start == 'first':
             start = dataset.new().long().new(batch_size).zero_()
         elif start == 'center':
@@ -286,13 +286,13 @@ def nearest_neighbour(dataset, start='first'):
             assert False, "Unknown start: {}".format(start)
 
     current = start
-    dist_to_startnode = torch.gather(dist, 2, current.view(-1, 1, 1).expand(batch_size, graph_size, 1)).squeeze(2)
+    dist_to_startnode = torch.gather(dist, 2, current.view(-1, 1, 1).expand(batch_size, task_size, 1)).squeeze(2)
     tour = [current]
 
-    for i in range(graph_size - 1):
+    for i in range(task_size - 1):
         # Mark out current node as option
-        dist.scatter_(2, current.view(-1, 1, 1).expand(batch_size, graph_size, 1), np.inf)
-        nn_dist = torch.gather(dist, 1, current.view(-1, 1, 1).expand(batch_size, 1, graph_size)).squeeze(1)
+        dist.scatter_(2, current.view(-1, 1, 1).expand(batch_size, task_size, 1), np.inf)
+        nn_dist = torch.gather(dist, 1, current.view(-1, 1, 1).expand(batch_size, 1, task_size)).squeeze(1)
 
         min_nn_dist, current = nn_dist.min(1)
         total_dist += min_nn_dist

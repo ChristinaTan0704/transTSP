@@ -5,7 +5,7 @@
  "lr_model": 0.0001,
  "val_size": 10000,
  "epoch_size": 1280000,
- "graph_size": 10,
+ "task_size": 10,
  "batch_size": 512,
  "val_dataset": "",
  "checkpoint_epochs": 50,

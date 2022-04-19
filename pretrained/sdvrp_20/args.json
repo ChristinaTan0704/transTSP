@@ -19,7 +19,7 @@
  "lr_model": 0.0001,
  "bl_warmup_epochs": 1,
  "no_cuda": false,
- "graph_size": 20,
+ "task_size": 20,
  "epoch_start": 0,
  "problem": "sdvrp",
  "eval_only": false,

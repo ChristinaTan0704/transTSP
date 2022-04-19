@@ -15,11 +15,19 @@ def clip_float_coord_to_grid(map_size, data):
     data /= map_size
     return data
 
-def get_shortest_distace_from_distance_map(coord_list, distance_map_list):
+def get_shortest_distace_from_distance_map(gird_num, coord_list, distance_map_list):
     cost = torch.zeros([1], device=distance_map_list.device)
+    # import pdb; pdb.set_trace()
+    # distance_map_list.gather(0,coord)
+    # TODO try to optimze the coding here
     for index, distance_map in enumerate(distance_map_list):
-        x, y = coord_list[index-1].type(torch.int32)
+        x, y = (coord_list[index-1]*gird_num).round().type(torch.int32)
+        if x == gird_num:
+            x -= 1
+        if y == gird_num:
+            y -= 1
         cost += distance_map[x][y]
+
     return cost
         
 
@@ -42,6 +50,7 @@ class TSP(object):
 
     @staticmethod
     def get_heatmap_costs(opts, dataset, pi): 
+
         # Check that tours are valid, i.e. contain 0 to n -1
         input_coord, input_heatmap = dataset
         assert (
@@ -55,11 +64,12 @@ class TSP(object):
             # ! here return the cost for all instances; return size : batch_size * 1; the value represent the tour length for one instance
             return (d[:, 1:] - d[:, :-1]).norm(p=2, dim=2).sum(1) + (d[:, 0] - d[:, -1]).norm(p=2, dim=1), None
         elif "Shortest" in opts.loss:
-            cost_list = torch.zeros([len(input_coord)], device=input_coord.device)
-            for index, [coord_list, distance_map_list] in enumerate(zip(input_coord, input_heatmap)):
-                cost_list[index] = get_shortest_distace_from_distance_map(coord_list, distance_map_list)
+            cost_list = torch.zeros([len(d)], device=d.device)
+            for index, one_tour in enumerate(pi):
+                coord_list = input_coord[index][one_tour]
+                distance_map_list = input_heatmap[index][one_tour]
+                cost_list[index] = get_shortest_distace_from_distance_map(opts.grid_num, coord_list, distance_map_list)
             return cost_list, None
-
 
     @staticmethod
     def make_dataset(*args, **kwargs):

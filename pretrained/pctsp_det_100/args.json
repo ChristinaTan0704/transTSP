@@ -1,6 +1,6 @@
 {
  "problem": "pctsp_det",
- "graph_size": 100,
+ "task_size": 100,
  "batch_size": 512,
  "epoch_size": 1280000,
  "val_size": 10000,
