@@ -1,4 +1,5 @@
 import argparse
+from turtle import pd
 import numpy as np
 import os
 import time
@@ -412,6 +413,7 @@ if __name__ == "__main__":
 
             elif method == "lkh":
                 use_multiprocessing = False
+
                 executable = get_lkh_executable()
 
                 def run_func(args):
