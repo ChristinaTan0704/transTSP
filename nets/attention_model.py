@@ -818,7 +818,7 @@ class AttentionModel(nn.Module):
     def _select_node(self, probs, mask):
 
         assert (probs == probs).all(), "Probs should not contain any nans"
-
+        self.decode_type = "sampling" # TODO del later
         if self.decode_type == "greedy":
             _, selected = probs.max(1)
             assert not mask.gather(1, selected.unsqueeze(
