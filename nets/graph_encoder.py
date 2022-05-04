@@ -129,7 +129,7 @@ class Normalization(nn.Module):
             'instance': nn.InstanceNorm1d
         }.get(normalization, None)
 
-        self.normalizer = normalizer_class(embed_dim, affine=True)
+        self.normalizer = normalizer_class(embed_dim, affine=True, track_running_stats=False)
 
         # Normalization by default initializes affine parameters with bias 0 and weight unif(0,1) which is too large!
         # self.init_parameters()
