@@ -13,7 +13,7 @@ from mapd.utils.general_utils import dict2obj
 
 def load_problem(name):
     from mapd.lib.transTSP.problems import TSP, CVRP, SDVRP, OP, PCTSPDet, PCTSPStoch
-    from mapd.problem import TSPOBS, TSPHEATMAP
+    from mapd.problem import TSPOBS, TSPHEATMAP, TA
     problem = {
         'tsp': TSP,
         'cvrp': CVRP,
@@ -22,6 +22,7 @@ def load_problem(name):
         'pctsp_det': PCTSPDet,
         'pctsp_stoch': PCTSPStoch,
         'tspobs':TSPOBS,
+        'ta':TA,
         'tspheatmap':TSPHEATMAP,
     }.get(name, None)
     assert problem is not None, "Currently unsupported problem: {}!".format(name)
