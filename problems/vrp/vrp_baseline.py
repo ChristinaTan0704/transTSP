@@ -11,14 +11,13 @@ from datetime import timedelta
 from mapd.lib.transTSP.utils import run_all_in_pool
 
 
-def get_lkh_executable(url="http://www.akira.ruc.dk/~keld/research/LKH-3/LKH-3.0.4.tgz"):
+def get_lkh_executable(url="http://webhotel4.ruc.dk/\~keld/research/LKH-3/LKH-3.0.7.tgz"):
 
     cwd = os.path.abspath(os.path.join("problems", "vrp", "lkh"))
     os.makedirs(cwd, exist_ok=True)
 
     file = os.path.join(cwd, os.path.split(urlparse(url).path)[-1])
     filedir = os.path.splitext(file)[0]
-
     if not os.path.isdir(filedir):
         print("{} not found, downloading and compiling".format(filedir))
 
@@ -29,7 +28,6 @@ def get_lkh_executable(url="http://www.akira.ruc.dk/~keld/research/LKH-3/LKH-3.0
         assert os.path.isdir(filedir), "Extracting failed, dir {} does not exist".format(filedir)
         check_call("make", cwd=filedir)
         os.remove(file)
-
     executable = os.path.join(filedir, "LKH")
     assert os.path.isfile(executable)
     return os.path.abspath(executable)

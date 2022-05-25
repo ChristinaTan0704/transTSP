@@ -1,5 +1,5 @@
-def log_values(exe_cost, bl_val, loss, cost, grad_norms, epoch, batch_id, step,
-               log_likelihood, reinforce_loss, bl_loss, tb_logger, opts):
+def log_values(bl_val, loss, cost, grad_norms, epoch, batch_id, step,
+               log_likelihood, reinforce_loss, bl_loss, tb_logger, other_log, opts):
     avg_cost = cost.mean().item()
     grad_norms, grad_norms_clipped = grad_norms
 
@@ -29,5 +29,7 @@ def log_values(exe_cost, bl_val, loss, cost, grad_norms, epoch, batch_id, step,
             tb_logger.log_value('critic_grad_norm', grad_norms[1], step)
             tb_logger.log_value('critic_grad_norm_clipped', grad_norms_clipped[1], step)
 
-        if opts.problem == "ta":
-            tb_logger.log_value('exe_cost', exe_cost.mean().item(), step)
+        if other_log is not None:
+            for item in other_log.items():
+                tb_logger.log_value(item[0], item[1].mean().item(), step)
+                print("{} {}".format(item[0], item[1].mean().item()))

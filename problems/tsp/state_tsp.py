@@ -40,7 +40,11 @@ class StateTSP(NamedTuple):
 
     @staticmethod
     def initialize(loc, visited_dtype=torch.uint8):
-
+        if len(loc) > 0:
+            if len(loc) >= 8:
+                loc = torch.cat((loc[0], loc[-2]), 1)
+            else:
+                loc = loc[0]
         batch_size, n_loc, _ = loc.size() # ! n_loc = task_size ; loc.size() = (batch_size, task_size, coord_size )
         prev_a = torch.zeros(batch_size, 1, dtype=torch.long, device=loc.device) # size = (batch_size, 1)
         return StateTSP(
@@ -87,7 +91,6 @@ class StateTSP(NamedTuple):
 
         # Update should only be called with just 1 parallel step, in which case we can check this way if we should update
         first_a = prev_a if self.i.item() == 0 else self.first_a
-
         if self.visited_.dtype == torch.uint8:
             # Add one dimension since we write a single value
             visited_ = self.visited_.scatter(-1, prev_a[:, :, None], 1)
