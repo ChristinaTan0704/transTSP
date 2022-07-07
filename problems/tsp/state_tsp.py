@@ -42,7 +42,7 @@ class StateTSP(NamedTuple):
     def initialize(loc, visited_dtype=torch.uint8):
         if len(loc) > 0:
             if len(loc) >= 8:
-                loc = torch.cat((loc[0], loc[-2]), 1)
+                loc = torch.cat((loc[0], loc[-3]), 1)
             else:
                 loc = loc[0]
         batch_size, n_loc, _ = loc.size() # ! n_loc = task_size ; loc.size() = (batch_size, task_size, coord_size )
