@@ -990,7 +990,6 @@ class AttentionModel(nn.Module):
 
         # Batch matrix multiplication to compute heads (n_heads, batch_size, num_steps, val_size)
         heads = torch.matmul(torch.softmax(compatibility, dim=-1), glimpse_V)
-
         # Project to get glimpse/updated context node embedding (batch_size, num_steps, embedding_dim)
         glimpse = self.project_out(
             heads.permute(1, 2, 3, 0, 4).contiguous().view(-1, num_steps, 1, self.n_heads * val_size))
