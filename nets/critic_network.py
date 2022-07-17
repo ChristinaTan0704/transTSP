@@ -33,7 +33,7 @@ class CriticNetwork(nn.Module):
     def forward(self, inputs):
         """
 
-        :param inputs: (batch_size, task_size, input_dim)
+        :param inputs: (batch_size, task_num, input_dim)
         :return:
         """
         _, graph_embeddings = self.encoder(inputs)

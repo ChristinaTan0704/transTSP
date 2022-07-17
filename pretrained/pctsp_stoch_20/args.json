@@ -1,6 +1,6 @@
 {
  "problem": "pctsp_stoch",
- "task_size": 20,
+ "task_num": 20,
  "batch_size": 512,
  "epoch_size": 1280000,
  "val_size": 10000,

@@ -32,7 +32,7 @@ For more details, please see our paper [Attention, Learn to Solve Routing Proble
 
 For training TSP instances with 20 nodes and using rollout as REINFORCE baseline:
 ```bash
-python run.py --task_size 20 --baseline rollout --run_name 'tsp20_rollout'
+python run.py --task_num 20 --baseline rollout --run_name 'tsp20_rollout'
 ```
 
 ## Usage
@@ -49,7 +49,7 @@ python generate_data.py --problem all --name test --seed 1234
 
 For training TSP instances with 20 nodes and using rollout as REINFORCE baseline and using the generated validation set:
 ```bash
-python run.py --task_size 20 --baseline rollout --run_name 'tsp20_rollout' --val_dataset data/tsp/tsp20_validation_seed4321.pkl
+python run.py --task_num 20 --baseline rollout --run_name 'tsp20_rollout' --val_dataset data/tsp/tsp20_validation_seed4321.pkl
 ```
 
 #### Multiple GPUs
@@ -63,12 +63,12 @@ Note that using multiple GPUs has limited efficiency for small problem sizes (up
 #### Warm start
 You can initialize a run using a pretrained model by using the `--load_path` option:
 ```bash
-python run.py --task_size 100 --load_path pretrained/tsp_100/epoch-99.pt
+python run.py --task_num 100 --load_path pretrained/tsp_100/epoch-99.pt
 ```
 
 The `--load_path` option can also be used to load an earlier run, in which case also the optimizer state will be loaded:
 ```bash
-python run.py --task_size 20 --load_path 'outputs/tsp_20/tsp20_rollout_{datetime}/epoch-0.pt'
+python run.py --task_num 20 --load_path 'outputs/tsp_20/tsp20_rollout_{datetime}/epoch-0.pt'
 ```
 
 The `--resume` option can be used instead of the `--load_path` option, which will try to resume the run, e.g. load additionally the baseline state, set the current epoch/step counter and set the random number generator state.

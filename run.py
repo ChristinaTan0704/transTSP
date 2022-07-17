@@ -21,7 +21,7 @@
 
 # def run(opts):
 #     # Pretty print the run args
-#     opts.run_name = "{}{}_{}_{}_{}_{}".format(opts.problem, opts.task_size, opts.baseline, opts.embed, opts.loss, opts.run_name)
+#     opts.run_name = "{}{}_{}_{}_{}_{}".format(opts.problem, opts.task_num, opts.baseline, opts.embed, opts.loss, opts.run_name)
 #     pp.pprint(vars(opts))
 
 #     # Set the random seed
@@ -30,7 +30,7 @@
 #     # Optionally configure tensorboard
 #     tb_logger = None
 #     if not opts.no_tensorboard:
-#         tb_logger = TbLogger(os.path.join(opts.log_dir, "{}_{}".format(opts.problem, opts.task_size), opts.run_name))
+#         tb_logger = TbLogger(os.path.join(opts.log_dir, "{}_{}".format(opts.problem, opts.task_num), opts.run_name))
 
 #     # Create a directory to store the information
 #     while True:
@@ -172,7 +172,7 @@
 
 #     # Start the actual training loop
 #     val_dataset = problem.make_dataset(
-#         size=opts.task_size, num_samples=opts.val_size, filename=opts.val_dataset, distribution=opts.data_distribution, opts=opts)
+#         size=opts.task_num, num_samples=opts.val_size, filename=opts.val_dataset, distribution=opts.data_distribution, opts=opts)
 
 #     if opts.resume:
 #         epoch_resume = int(os.path.splitext(os.path.split(opts.resume)[-1])[0].split("-")[1])

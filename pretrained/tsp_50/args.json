@@ -15,7 +15,7 @@
  "epoch_size": 1280000,
  "baseline": "rollout",
  "problem": "tsp",
- "task_size": 50,
+ "task_num": 50,
  "n_epochs": 100,
  "lr_decay": 1.0,
  "no_cuda": false,

@@ -161,19 +161,19 @@
 #                 if len(dataset) != self.opts.val_size:
 #                     print("Warning: not using saved baseline dataset since val_size does not match")
 #                     dataset = None
-#                 elif (dataset[0][0] if self.problem.NAME == 'tsp' else dataset[0][0]['loc']).size(0) != self.opts.task_size:
-#                     print("Warning: not using saved baseline dataset since task_size does not match")
+#                 elif (dataset[0][0] if self.problem.NAME == 'tsp' else dataset[0][0]['loc']).size(0) != self.opts.task_num:
+#                     print("Warning: not using saved baseline dataset since task_num does not match")
 #                     dataset = None
 #             else:
 #                 if len(dataset) != self.opts.val_size:
 #                     print("Warning: not using saved baseline dataset since val_size does not match")
 #                     dataset = None
-#                 elif (dataset[0] if self.problem.NAME == 'tsp' else dataset[0]['loc']).size(0) != self.opts.task_size:
-#                     print("Warning: not using saved baseline dataset since task_size does not match")
+#                 elif (dataset[0] if self.problem.NAME == 'tsp' else dataset[0]['loc']).size(0) != self.opts.task_num:
+#                     print("Warning: not using saved baseline dataset since task_num does not match")
 #                     dataset = None
 #         if dataset is None:
 #             self.dataset = self.problem.make_dataset(
-#                 size=self.opts.task_size, num_samples=self.opts.val_size, filename=self.opts.train_dataset, distribution=self.opts.data_distribution, opts=self.opts)
+#                 size=self.opts.task_num, num_samples=self.opts.val_size, filename=self.opts.train_dataset, distribution=self.opts.data_distribution, opts=self.opts)
 #         else:
 #             self.dataset = dataset
 #         print("Evaluating baseline model on evaluation dataset")

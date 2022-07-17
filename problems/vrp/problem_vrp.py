@@ -16,15 +16,15 @@ class CVRP(object):
 
     @staticmethod
     def get_costs(dataset, pi):
-        batch_size, task_size = dataset['demand'].size()
+        batch_size, task_num = dataset['demand'].size()
         # Check that tours are valid, i.e. contain 0 to n -1
         sorted_pi = pi.data.sort(1)[0]
 
         # Sorting it should give all zeros at front and then 1...n
         assert (
-            torch.arange(1, task_size + 1, out=pi.data.new()).view(1, -1).expand(batch_size, task_size) ==
-            sorted_pi[:, -task_size:]
-        ).all() and (sorted_pi[:, :-task_size] == 0).all(), "Invalid tour"
+            torch.arange(1, task_num + 1, out=pi.data.new()).view(1, -1).expand(batch_size, task_num) ==
+            sorted_pi[:, -task_num:]
+        ).all() and (sorted_pi[:, :-task_num] == 0).all(), "Invalid tour"
 
         # Visiting depot resets capacity so we add demand = -capacity (we make sure it does not become negative)
         demand_with_depot = torch.cat(
@@ -90,7 +90,7 @@ class SDVRP(object):
 
     @staticmethod
     def get_costs(dataset, pi):
-        batch_size, task_size = dataset['demand'].size()
+        batch_size, task_num = dataset['demand'].size()
 
         # Each node can be visited multiple times, but we always deliver as much demand as possible
         # We check that at the end all demand has been satisfied

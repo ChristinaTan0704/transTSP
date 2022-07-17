@@ -45,7 +45,7 @@ class StateTSP(NamedTuple):
                 loc = torch.cat((loc[0], loc[-3]), 1)
             else:
                 loc = loc[0]
-        batch_size, n_loc, _ = loc.size() # ! n_loc = task_size ; loc.size() = (batch_size, task_size, coord_size )
+        batch_size, n_loc, _ = loc.size() # ! n_loc = task_num ; loc.size() = (batch_size, task_num, coord_size )
         prev_a = torch.zeros(batch_size, 1, dtype=torch.long, device=loc.device) # size = (batch_size, 1)
         return StateTSP(
             loc=loc,

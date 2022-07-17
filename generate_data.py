@@ -133,7 +133,7 @@ if __name__ == "__main__":
 
     for problem, distributions in problems.items():
         for distribution in distributions or [None]:
-            for task_size in opts.task_sizes:
+            for task_num in opts.task_sizes:
                 datadir = os.path.join(opts.data_dir, problem)
                 os.makedirs(datadir, exist_ok=True)
 
@@ -141,7 +141,7 @@ if __name__ == "__main__":
                     filename = os.path.join(datadir, "{}{}{}_{}_seed{}.pkl".format(
                         problem,
                         "_{}".format(distribution) if distribution is not None else "",
-                        task_size, opts.name, opts.seed))
+                        task_num, opts.name, opts.seed))
                 else:
                     filename = check_extension(opts.filename)
 
@@ -150,14 +150,14 @@ if __name__ == "__main__":
 
                 np.random.seed(opts.seed)
                 if problem == 'tsp':
-                    dataset = generate_tsp_data(opts.dataset_size, task_size)
+                    dataset = generate_tsp_data(opts.dataset_size, task_num)
                 elif problem == 'vrp':
                     dataset = generate_vrp_data(
-                        opts.dataset_size, task_size)
+                        opts.dataset_size, task_num)
                 elif problem == 'pctsp':
-                    dataset = generate_pctsp_data(opts.dataset_size, task_size)
+                    dataset = generate_pctsp_data(opts.dataset_size, task_num)
                 elif problem == "op":
-                    dataset = generate_op_data(opts.dataset_size, task_size, prize_type=distribution)
+                    dataset = generate_op_data(opts.dataset_size, task_num, prize_type=distribution)
                 else:
                     assert False, "Unknown problem: {}".format(problem)
 

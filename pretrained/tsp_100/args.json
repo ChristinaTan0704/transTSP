@@ -29,7 +29,7 @@
  "log_step": 500,
  "save_dir": "",
  "no_cuda": false,
- "task_size": 100,
+ "task_num": 100,
  "normalization": "batch",
  "model": "attention",
  "bl_alpha": 0.05,

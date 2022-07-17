@@ -1,5 +1,5 @@
 {
- "task_size": 50,
+ "task_num": 50,
  "lr_decay": 1.0,
  "problem": "cvrp",
  "no_progress_bar": true,

@@ -89,7 +89,7 @@
 #         tb_logger.log_value('learnrate_pg0', optimizer.param_groups[0]['lr'], step)
 #     # Generate new training data for each epoch
 #     training_dataset = baseline.wrap_dataset(problem.make_dataset(
-#         size=opts.task_size, num_samples=opts.epoch_size, distribution=opts.data_distribution, filename=opts.train_dataset, opts=opts))
+#         size=opts.task_num, num_samples=opts.epoch_size, distribution=opts.data_distribution, filename=opts.train_dataset, opts=opts))
 #     training_dataloader = DataLoader(training_dataset, batch_size=opts.batch_size, num_workers=1)
 
 #     # Put model in train mode!
